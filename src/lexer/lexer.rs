@@ -1,0 +1,51 @@
+use crate::token::{Token, TokenType};
+
+#[derive(Default)]
+pub struct Lexer {
+    pub input: Vec<u8>,
+    // current position in input (points to current char)
+    position: usize,
+    // current reading position in input (after current char)
+    read_position: usize,
+    // current char under examination
+    ch: u8,
+}
+
+impl Lexer {
+    pub fn new(input: String) -> Self {
+        Self {
+            input: input.into_bytes(),
+            position: 0,
+            read_position: 0,
+            ch: 0,
+        }
+    }
+
+    fn read_char(&mut self) {
+        if self.read_position as usize >= self.input.len() {
+            self.ch = 0; // NUL byte represents EOF in ASCII
+        } else {
+            self.ch = self.input[self.read_position];
+        }
+        self.position = self.read_position;
+        self.read_position += 1;
+    }
+
+    pub fn next_token(&mut self) -> Token {
+        let tok: Token = match self.ch {
+            b'=' => Token::new(TokenType::Assign, self.ch.to_string()),
+            b';' => Token::new(TokenType::Semicolon, self.ch.to_string()),
+            b'(' => Token::new(TokenType::Lparen, self.ch.to_string()),
+            b')' => Token::new(TokenType::Rparen, self.ch.to_string()),
+            b',' => Token::new(TokenType::Comma, self.ch.to_string()),
+            b'+' => Token::new(TokenType::Plus, self.ch.to_string()),
+            b'{' => Token::new(TokenType::Plus, self.ch.to_string()),
+            b'}' => Token::new(TokenType::Plus, self.ch.to_string()),
+            0 => Token::new(TokenType::Eof, self.ch.to_string()),
+            _ => Token::new(TokenType::Eof, self.ch.to_string()),
+        };
+
+        self.read_char();
+        tok
+    }
+}
