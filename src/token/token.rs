@@ -20,16 +20,17 @@ pub enum TokenType {
     Let,
 }
 
+#[derive(Debug, Clone)]
 pub struct Token {
-    token_type: TokenType,
-    token_literal: String,
+    pub t_type: TokenType,
+    pub t_literal: String,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, token_literal: String) -> Self {
+    pub fn new(token_type: TokenType, ch: u8) -> Self {
         Self {
-            token_type,
-            token_literal,
+            t_type: token_type,
+            t_literal: (ch as char).to_string(),
         }
     }
 }

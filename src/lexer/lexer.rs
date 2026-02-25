@@ -13,12 +13,15 @@ pub struct Lexer {
 
 impl Lexer {
     pub fn new(input: String) -> Self {
-        Self {
+        let mut new_lexer = Self {
             input: input.into_bytes(),
             position: 0,
             read_position: 0,
             ch: 0,
-        }
+        };
+
+        new_lexer.read_char();
+        return new_lexer;
     }
 
     fn read_char(&mut self) {
@@ -33,16 +36,19 @@ impl Lexer {
 
     pub fn next_token(&mut self) -> Token {
         let tok: Token = match self.ch {
-            b'=' => Token::new(TokenType::Assign, self.ch.to_string()),
-            b';' => Token::new(TokenType::Semicolon, self.ch.to_string()),
-            b'(' => Token::new(TokenType::Lparen, self.ch.to_string()),
-            b')' => Token::new(TokenType::Rparen, self.ch.to_string()),
-            b',' => Token::new(TokenType::Comma, self.ch.to_string()),
-            b'+' => Token::new(TokenType::Plus, self.ch.to_string()),
-            b'{' => Token::new(TokenType::Plus, self.ch.to_string()),
-            b'}' => Token::new(TokenType::Plus, self.ch.to_string()),
-            0 => Token::new(TokenType::Eof, self.ch.to_string()),
-            _ => Token::new(TokenType::Eof, self.ch.to_string()),
+            b'=' => Token::new(TokenType::Assign, self.ch),
+            b';' => Token::new(TokenType::Semicolon, self.ch),
+            b'(' => Token::new(TokenType::Lparen, self.ch),
+            b')' => Token::new(TokenType::Rparen, self.ch),
+            b',' => Token::new(TokenType::Comma, self.ch),
+            b'+' => Token::new(TokenType::Plus, self.ch),
+            b'{' => Token::new(TokenType::Lbrace, self.ch),
+            b'}' => Token::new(TokenType::Rbrace, self.ch),
+            0 => Token {
+                t_type: TokenType::Eof,
+                t_literal: "".to_string(),
+            },
+            _ => panic!("Illegal!"),
         };
 
         self.read_char();
