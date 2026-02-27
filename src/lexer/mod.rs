@@ -85,6 +85,142 @@ mod tests {
                 t_type: TokenType::Assign,
                 t_literal: "=".to_string(),
             },
+            Token {
+                t_type: TokenType::Int,
+                t_literal: "5".to_string(),
+            },
+            Token {
+                t_type: TokenType::Semicolon,
+                t_literal: ";".to_string(),
+            },
+            Token {
+                t_type: TokenType::Let,
+                t_literal: "let".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "ten".to_string(),
+            },
+            Token {
+                t_type: TokenType::Assign,
+                t_literal: "=".to_string(),
+            },
+            Token {
+                t_type: TokenType::Int,
+                t_literal: "10".to_string(),
+            },
+            Token {
+                t_type: TokenType::Semicolon,
+                t_literal: ";".to_string(),
+            },
+            Token {
+                t_type: TokenType::Let,
+                t_literal: "let".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "add".to_string(),
+            },
+            Token {
+                t_type: TokenType::Assign,
+                t_literal: "=".to_string(),
+            },
+            Token {
+                t_type: TokenType::Function,
+                t_literal: "fn".to_string(),
+            },
+            Token {
+                t_type: TokenType::Lparen,
+                t_literal: "(".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "x".to_string(),
+            },
+            Token {
+                t_type: TokenType::Comma,
+                t_literal: ",".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "y".to_string(),
+            },
+            Token {
+                t_type: TokenType::Rparen,
+                t_literal: ")".to_string(),
+            },
+            Token {
+                t_type: TokenType::Lbrace,
+                t_literal: "{".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "x".to_string(),
+            },
+            Token {
+                t_type: TokenType::Plus,
+                t_literal: "+".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "y".to_string(),
+            },
+            Token {
+                t_type: TokenType::Semicolon,
+                t_literal: ";".to_string(),
+            },
+            Token {
+                t_type: TokenType::Rbrace,
+                t_literal: "}".to_string(),
+            },
+            Token {
+                t_type: TokenType::Semicolon,
+                t_literal: ";".to_string(),
+            },
+            Token {
+                t_type: TokenType::Let,
+                t_literal: "let".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "result".to_string(),
+            },
+            Token {
+                t_type: TokenType::Assign,
+                t_literal: "=".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "add".to_string(),
+            },
+            Token {
+                t_type: TokenType::Lparen,
+                t_literal: "(".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "five".to_string(),
+            },
+            Token {
+                t_type: TokenType::Comma,
+                t_literal: ",".to_string(),
+            },
+            Token {
+                t_type: TokenType::Ident,
+                t_literal: "ten".to_string(),
+            },
+            Token {
+                t_type: TokenType::Rparen,
+                t_literal: ")".to_string(),
+            },
+            Token {
+                t_type: TokenType::Semicolon,
+                t_literal: ";".to_string(),
+            },
+            Token {
+                t_type: TokenType::Eof,
+                t_literal: "".to_string(),
+            },
         ];
 
         let mut l = Lexer::new(input.to_string());

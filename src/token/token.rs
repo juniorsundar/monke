@@ -33,4 +33,12 @@ impl Token {
             t_literal: (ch as char).to_string(),
         }
     }
+
+    pub fn lookup_identifier(word: &str) -> TokenType {
+        match word {
+            "fn" => TokenType::Function,
+            "let" => TokenType::Let,
+            _ => TokenType::Ident,
+        }
+    }
 }
