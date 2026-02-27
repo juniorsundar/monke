@@ -69,6 +69,12 @@ impl Lexer {
             b')' => Token::new(TokenType::Rparen, self.ch),
             b',' => Token::new(TokenType::Comma, self.ch),
             b'+' => Token::new(TokenType::Plus, self.ch),
+            b'-' => Token::new(TokenType::Minus, self.ch),
+            b'!' => Token::new(TokenType::Bang, self.ch),
+            b'*' => Token::new(TokenType::Asterisk, self.ch),
+            b'/' => Token::new(TokenType::Slash, self.ch),
+            b'<' => Token::new(TokenType::Lt, self.ch),
+            b'>' => Token::new(TokenType::Gt, self.ch),
             b'{' => Token::new(TokenType::Lbrace, self.ch),
             b'}' => Token::new(TokenType::Rbrace, self.ch),
             0 => Token {
