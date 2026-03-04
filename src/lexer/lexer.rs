@@ -60,17 +60,51 @@ impl Lexer {
         return_string
     }
 
+    fn peek_char(&mut self) -> u8 {
+        if self.read_position >= self.input.len() {
+            return 0;
+        } else {
+            return self.input[self.read_position];
+        }
+    }
+
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
         let tok: Token = match self.ch {
-            b'=' => Token::new(TokenType::Assign, self.ch),
+            b'=' => {
+                let next_char = self.peek_char();
+                if next_char == b'=' {
+                    let ch = self.ch;
+                    self.read_char();
+                    let literal = (ch as char).to_string() + &(self.ch as char).to_string();
+                    Token {
+                        t_type: TokenType::Eq,
+                        t_literal: literal,
+                    }
+                } else {
+                    Token::new(TokenType::Assign, self.ch)
+                }
+            }
             b';' => Token::new(TokenType::Semicolon, self.ch),
             b'(' => Token::new(TokenType::Lparen, self.ch),
             b')' => Token::new(TokenType::Rparen, self.ch),
             b',' => Token::new(TokenType::Comma, self.ch),
             b'+' => Token::new(TokenType::Plus, self.ch),
             b'-' => Token::new(TokenType::Minus, self.ch),
-            b'!' => Token::new(TokenType::Bang, self.ch),
+            b'!' => {
+                let next_char = self.peek_char();
+                if next_char == b'=' {
+                    let ch = self.ch;
+                    self.read_char();
+                    let literal = (ch as char).to_string() + &(self.ch as char).to_string();
+                    Token {
+                        t_type: TokenType::Neq,
+                        t_literal: literal,
+                    }
+                } else {
+                    Token::new(TokenType::Bang, self.ch)
+                }
+            }
             b'*' => Token::new(TokenType::Asterisk, self.ch),
             b'/' => Token::new(TokenType::Slash, self.ch),
             b'<' => Token::new(TokenType::Lt, self.ch),
