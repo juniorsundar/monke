@@ -1,5 +1,6 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
+    Start,
     Illegal,
     Eof,
     // Idenifiers + Literals
@@ -37,6 +38,15 @@ pub enum TokenType {
 pub struct Token {
     pub t_type: TokenType,
     pub t_literal: String,
+}
+
+impl Default for Token {
+    fn default() -> Self {
+        Self {
+            t_type: TokenType::Start,
+            t_literal: "".to_string(),
+        }
+    }
 }
 
 impl Token {
