@@ -62,9 +62,9 @@ impl Lexer {
 
     fn peek_char(&mut self) -> u8 {
         if self.read_position >= self.input.len() {
-            return 0;
+            0
         } else {
-            return self.input[self.read_position];
+            self.input[self.read_position]
         }
     }
 
@@ -139,11 +139,13 @@ impl Lexer {
     }
 
     fn is_letter(&self, ch: u8) -> bool {
-        return b'a' <= ch && ch <= b'z' || b'A' <= ch && ch <= b'Z' || ch == b'_';
+        // (b'a'..=b'z').contains(&ch) || (b'A'..=b'Z').contains(&ch) || ch == b'_'
+        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == b'_'
     }
 
     fn is_digit(&self, ch: u8) -> bool {
-        return b'0' <= ch && ch <= b'9';
+        // (b'0'..=b'9').contains(&ch)
+        ch.is_ascii_digit()
     }
 
     fn skip_whitespace(&mut self) {

@@ -1,9 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
-mod lexer;
-mod token;
+use monke::repl;
 
 fn main() {
-    println!("Hello, world!");
+    repl::start_repl().unwrap();
 }

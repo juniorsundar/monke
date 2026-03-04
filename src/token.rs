@@ -30,7 +30,7 @@ pub enum TokenType {
     False,
     If,
     Else,
-    Return
+    Return,
 }
 
 #[derive(Debug, Clone)]
