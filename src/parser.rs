@@ -7,20 +7,16 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum ParserError {
-    ParseProgramError,
-    ParseStatementError,
-    ParseLetStatementError,
-    IncorrectNextToken,
+    IncorrectNextToken(TokenType, TokenType), // Expected vs Received
 }
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParserError::ParseProgramError => write!(f, "Parser failed to parse program!"),
-            ParserError::ParseStatementError => write!(f, "Parser failed to parse statement!"),
-            ParserError::ParseLetStatementError => {
-                write!(f, "Parser failed to parse 'let' statement!")
-            }
-            ParserError::IncorrectNextToken => write!(f, "Incorrect next token!"),
+            ParserError::IncorrectNextToken(ex, recv) => write!(
+                f,
+                "Incorrect next token! Expected: {:?}, Received: {:?}",
+                ex, recv
+            ),
         }
     }
 }
@@ -29,6 +25,7 @@ pub struct Parser {
     lexer: Lexer,
     current_token: Token,
     peek_token: Token,
+    pub errors: Vec<ParserError>,
 }
 
 impl Parser {
@@ -37,6 +34,7 @@ impl Parser {
             lexer,
             current_token: Token::default(),
             peek_token: Token::default(),
+            errors: Vec::<ParserError>::new(),
         };
         parser.next_token();
         parser.next_token();
@@ -48,34 +46,31 @@ impl Parser {
         self.peek_token = self.lexer.next_token();
     }
 
-    pub fn parse_program(&mut self) -> Result<Program, ParserError> {
+    pub fn parse_program(&mut self) -> Program {
         let mut program = Program {
             statements: Vec::<Statement>::new(),
         };
 
         while self.current_token.t_type != TokenType::Eof {
-            let statement_result = self.parse_statement();
-            if let Ok(statement) = statement_result {
+            if let Some(statement) = self.parse_statement() {
                 program.statements.push(statement);
-            } else {
-                return Err(ParserError::ParseProgramError);
             }
             self.next_token();
         }
-        Ok(program)
+        program
     }
 
-    fn parse_statement(&mut self) -> Result<Statement, ParserError> {
+    fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token.t_type {
             TokenType::Let => self.parse_let_statement(),
-            _ => Err(ParserError::ParseStatementError),
+            _ => None,
         }
     }
 
-    fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
+    fn parse_let_statement(&mut self) -> Option<Statement> {
         let statement_token = self.current_token.clone();
-        if !self.expect_peek(TokenType::Ident) {
-            return Err(ParserError::IncorrectNextToken);
+        if !self.expect_peek(&TokenType::Ident) {
+            return None;
         }
 
         let statement_name = Identifier {
@@ -83,15 +78,15 @@ impl Parser {
             value: self.current_token.t_literal.clone(),
         };
 
-        if !self.expect_peek(TokenType::Assign) {
-            return Err(ParserError::IncorrectNextToken);
+        if !self.expect_peek(&TokenType::Assign) {
+            return None;
         }
 
-        while !self.current_token_is(TokenType::Semicolon) {
+        while !self.current_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
 
-        Ok(Statement::Let(LetStatement {
+        Some(Statement::Let(LetStatement {
             token: statement_token,
             name: statement_name,
             value: Box::new(Expression::Identifier(Identifier {
@@ -101,20 +96,28 @@ impl Parser {
         }))
     }
 
-    fn expect_peek(&mut self, expected_token: TokenType) -> bool {
+    fn expect_peek(&mut self, expected_token: &TokenType) -> bool {
         if self.peek_token_is(expected_token) {
             self.next_token();
             true
         } else {
+            self.peek_error(expected_token.clone());
             false
         }
     }
 
-    fn current_token_is(&self, wanted_token: TokenType) -> bool {
-        self.current_token.t_type == wanted_token
+    fn current_token_is(&self, wanted_token: &TokenType) -> bool {
+        self.current_token.t_type == wanted_token.clone()
     }
 
-    fn peek_token_is(&self, wanted_token: TokenType) -> bool {
-        self.peek_token.t_type == wanted_token
+    fn peek_token_is(&self, wanted_token: &TokenType) -> bool {
+        self.peek_token.t_type == wanted_token.clone()
+    }
+
+    fn peek_error(&mut self, token: TokenType) {
+        self.errors.push(ParserError::IncorrectNextToken(
+            token,
+            self.peek_token.t_type.clone(),
+        ));
     }
 }
