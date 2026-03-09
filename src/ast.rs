@@ -3,12 +3,14 @@ use crate::token::Token;
 #[derive(Debug)]
 pub enum Statement {
     Let(LetStatement),
+    Return(ReturnStatement),
     If,
 }
 impl Statement {
     pub fn token_literal(&self) -> String {
         match self {
             Statement::Let(t) => t.token.t_literal.clone(),
+            Statement::Return(t) => t.token.t_literal.clone(),
             _ => "".to_string(),
         }
     }
@@ -35,6 +37,11 @@ pub struct Identifier {
 pub struct LetStatement {
     pub token: Token,
     pub name: Identifier,
+    pub value: Box<Expression>,
+}
+#[derive(Debug)]
+pub struct ReturnStatement {
+    pub token: Token,
     pub value: Box<Expression>,
 }
 
