@@ -90,10 +90,10 @@ impl Parser {
         Some(Statement::Let(LetStatement {
             token: statement_token,
             name: statement_name,
-            value: Box::new(Expression::Identifier(Identifier {
+            value: Some(Box::new(Expression::Identifier(Identifier {
                 token: Token::default(),
                 value: "".to_string(),
-            })),
+            }))),
         }))
     }
 
@@ -130,7 +130,7 @@ impl Parser {
         }));
         let statement = Some(Statement::Return(ReturnStatement {
             token: statement_token,
-            value: statement_value,
+            value: Some(statement_value),
         }));
 
         self.next_token();
