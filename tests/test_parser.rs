@@ -1,4 +1,10 @@
-use monke::{ast::Statement, lexer::Lexer, parser::Parser};
+use std::ops::Deref;
+
+use monke::{
+    ast::{Expression, Statement},
+    lexer::Lexer,
+    parser::Parser,
+};
 
 fn test_let_statement(statement: &Statement, name: &str) {
     assert_eq!(
@@ -129,4 +135,40 @@ fn test_return_statements() {
             statement.token_literal()
         );
     }
+}
+
+#[test]
+fn test_identifier_expression() {
+    let input = "foobar;";
+
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain enough statements. got={}",
+        program.statements.len()
+    );
+
+    if let Statement::Expression(e) = &program.statements[0] {
+        if let Some(exp) = &e.value {
+            if let Expression::Identifier(ident) = exp.deref() {
+                assert_eq!(ident.value, "foobar".to_string());
+                assert_eq!(ident.token.t_literal, "foobar".to_string());
+            } else {
+                panic!("Expression isn't an Identifier")
+            }
+        } else {
+            panic!("Expression has no value")
+        }
+    } else {
+        panic!(
+            "Expected Statement::Expression(..) got={:?}",
+            program.statements[0]
+        )
+    };
 }

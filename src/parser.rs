@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Expression, Identifier, LetStatement, Program, ReturnStatement, Statement},
+    ast::{
+        Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement,
+        Statement,
+    },
     lexer::Lexer,
     token::{Token, TokenType},
 };
@@ -19,6 +22,35 @@ impl fmt::Display for ParserError {
             ),
         }
     }
+}
+
+// #[derive(Debug, Clone, Copy)]
+// enum PrefixParser {
+//     Identifier,
+//     // Integer,
+//     // Boolean,
+//     // PrefixOperator, // for !x, -x
+//     // GroupedExpression,
+//     // IfExpression,
+//     // FunctionLiteral,
+// }
+
+// #[derive(Clone, Copy)]
+// enum InfixParser {
+//     InfixOperator, // +, -, *, /
+//     Call,
+//     Index, // array[index]
+// }
+
+#[derive(Debug, Clone, Copy)]
+enum Precedence {
+    Lowest, // Starting point
+            // Equals,      // == !=
+            // LessGreater, // < > <= >=
+            // Sum,         // + -
+            // Product,     // * /
+            // Prefix,      // -X !X
+            // Call,        // fn()
 }
 
 pub struct Parser {
@@ -46,6 +78,31 @@ impl Parser {
         self.peek_token = self.lexer.next_token();
     }
 
+    fn expect_peek(&mut self, expected_token: &TokenType) -> bool {
+        if self.peek_token_is(expected_token) {
+            self.next_token();
+            true
+        } else {
+            self.peek_error(expected_token.clone());
+            false
+        }
+    }
+
+    fn current_token_is(&self, wanted_token: &TokenType) -> bool {
+        self.current_token.t_type == wanted_token.clone()
+    }
+
+    fn peek_token_is(&self, wanted_token: &TokenType) -> bool {
+        self.peek_token.t_type == wanted_token.clone()
+    }
+
+    fn peek_error(&mut self, token: TokenType) {
+        self.errors.push(ParserError::IncorrectNextToken(
+            token,
+            self.peek_token.t_type.clone(),
+        ));
+    }
+
     pub fn parse_program(&mut self) -> Program {
         let mut program = Program {
             statements: Vec::<Statement>::new(),
@@ -64,7 +121,7 @@ impl Parser {
         match self.current_token.t_type {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
-            _ => None,
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -97,31 +154,6 @@ impl Parser {
         }))
     }
 
-    fn expect_peek(&mut self, expected_token: &TokenType) -> bool {
-        if self.peek_token_is(expected_token) {
-            self.next_token();
-            true
-        } else {
-            self.peek_error(expected_token.clone());
-            false
-        }
-    }
-
-    fn current_token_is(&self, wanted_token: &TokenType) -> bool {
-        self.current_token.t_type == wanted_token.clone()
-    }
-
-    fn peek_token_is(&self, wanted_token: &TokenType) -> bool {
-        self.peek_token.t_type == wanted_token.clone()
-    }
-
-    fn peek_error(&mut self, token: TokenType) {
-        self.errors.push(ParserError::IncorrectNextToken(
-            token,
-            self.peek_token.t_type.clone(),
-        ));
-    }
-
     fn parse_return_statement(&mut self) -> Option<Statement> {
         let statement_token = self.current_token.clone();
         let statement_value = Box::new(Expression::Identifier(Identifier {
@@ -139,5 +171,35 @@ impl Parser {
         }
 
         statement
+    }
+
+    fn parse_expression(&mut self, _precedence: Precedence) -> Option<Expression> {
+        let left_expression = match self.current_token.t_type {
+            TokenType::Ident => self.parse_identifier_expression()?,
+            _ => return None,
+        };
+
+        Some(left_expression)
+    }
+
+    fn parse_expression_statement(&mut self) -> Option<Statement> {
+        let statement_token = self.current_token.clone();
+        let expression = self.parse_expression(Precedence::Lowest)?;
+
+        if self.peek_token_is(&TokenType::Semicolon) {
+            self.next_token();
+        }
+
+        Some(Statement::Expression(ExpressionStatement {
+            token: statement_token,
+            value: Some(Box::new(expression)),
+        }))
+    }
+
+    fn parse_identifier_expression(&mut self) -> Option<Expression> {
+        Some(Expression::Identifier(Identifier {
+            token: self.current_token.clone(),
+            value: self.current_token.t_literal.clone(),
+        }))
     }
 }
