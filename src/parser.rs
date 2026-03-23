@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement,
-        Statement,
+        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
+        ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -11,6 +11,7 @@ use std::fmt;
 #[derive(Debug)]
 pub enum ParserError {
     IncorrectNextToken(TokenType, TokenType), // Expected vs Received
+    IntegerParse(String),                     // Literal
 }
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -20,6 +21,7 @@ impl fmt::Display for ParserError {
                 "Incorrect next token! Expected: {:?}, Received: {:?}",
                 ex, recv
             ),
+            ParserError::IntegerParse(recv) => write!(f, "Failed to parse {:?} as integer!", recv),
         }
     }
 }
@@ -173,15 +175,6 @@ impl Parser {
         statement
     }
 
-    fn parse_expression(&mut self, _precedence: Precedence) -> Option<Expression> {
-        let left_expression = match self.current_token.t_type {
-            TokenType::Ident => self.parse_identifier_expression()?,
-            _ => return None,
-        };
-
-        Some(left_expression)
-    }
-
     fn parse_expression_statement(&mut self) -> Option<Statement> {
         let statement_token = self.current_token.clone();
         let expression = self.parse_expression(Precedence::Lowest)?;
@@ -196,10 +189,38 @@ impl Parser {
         }))
     }
 
+    fn parse_expression(&mut self, _precedence: Precedence) -> Option<Expression> {
+        let left_expression = match self.current_token.t_type {
+            TokenType::Ident => self.parse_identifier_expression()?,
+            TokenType::Int => self.parse_integer_literal_expression()?,
+            _ => return None,
+        };
+
+        Some(left_expression)
+    }
+
     fn parse_identifier_expression(&mut self) -> Option<Expression> {
         Some(Expression::Identifier(Identifier {
             token: self.current_token.clone(),
             value: self.current_token.t_literal.clone(),
+        }))
+    }
+
+    fn parse_integer_literal_expression(&mut self) -> Option<Expression> {
+        let integer_literal_token = self.current_token.clone();
+
+        let integer_literal_value = if let Ok(t) = self.current_token.t_literal.parse::<i64>() {
+            t
+        } else {
+            self.errors.push(ParserError::IntegerParse(
+                self.current_token.t_literal.to_string(),
+            ));
+            return None;
+        };
+
+        Some(Expression::IntegerLiteral(IntegerLiteral {
+            token: integer_literal_token,
+            value: integer_literal_value,
         }))
     }
 }

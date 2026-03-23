@@ -65,21 +65,34 @@ impl Identifier {
         self.value.clone()
     }
 }
+#[derive(Debug, Default)]
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64,
+}
+impl IntegerLiteral {
+    pub fn string(&self) -> String {
+        self.token.t_literal.clone()
+    }
+}
 
 #[derive(Debug)]
 pub enum Expression {
     Identifier(Identifier),
+    IntegerLiteral(IntegerLiteral),
 }
 impl Expression {
     pub fn token_literal(&self) -> String {
         match self {
             Expression::Identifier(t) => t.token.t_literal.clone(),
+            Expression::IntegerLiteral(t) => t.token.t_literal.clone(),
         }
     }
 
     pub fn string(&self) -> String {
         match self {
             Expression::Identifier(t) => t.string(),
+            Expression::IntegerLiteral(t) => t.string(),
         }
     }
 }

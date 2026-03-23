@@ -172,3 +172,45 @@ fn test_identifier_expression() {
         )
     };
 }
+
+#[test]
+fn test_integer_literal_expression() {
+    let input = "5;";
+
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain enough statements. got={}",
+        program.statements.len()
+    );
+
+
+    if let Statement::Expression(e) = &program.statements[0] {
+        if let Some(exp) = &e.value {
+            if let Expression::IntegerLiteral(integer_literal) = exp.deref() {
+                assert_eq!(integer_literal.value, 5);
+                assert_eq!(integer_literal.token.t_literal, "5".to_string());
+            } else {
+                panic!("Expression isn't an IntegerLiteral")
+            }
+        } else {
+            panic!("Expression has no value")
+        }
+    } else {
+        panic!(
+            "Expected Statement::Expression(..) got={:?}",
+            program.statements[0]
+        )
+    };
+}
+
+#[test]
+fn test_prefix_expressions() {
+
+}
