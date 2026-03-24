@@ -190,7 +190,6 @@ fn test_integer_literal_expression() {
         program.statements.len()
     );
 
-
     if let Statement::Expression(e) = &program.statements[0] {
         if let Some(exp) = &e.value {
             if let Expression::IntegerLiteral(integer_literal) = exp.deref() {
@@ -212,5 +211,21 @@ fn test_integer_literal_expression() {
 
 #[test]
 fn test_prefix_expressions() {
+    let inputs = vec!["!5;", "-15;"];
+    let parsed_outputs = vec![("!", "5"), ("-", "15")];
 
+    for i in 0..inputs.len() {
+        let lexer = Lexer::new(inputs[i].to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "program.Statements does not contain enough statements. got={}",
+            program.statements.len()
+        );
+    }
 }
