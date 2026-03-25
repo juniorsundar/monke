@@ -75,24 +75,42 @@ impl IntegerLiteral {
         self.token.t_literal.clone()
     }
 }
+#[derive(Debug, Default)]
+pub struct Prefix {
+    pub token: Token,
+    pub operator: String,
+    pub right: Option<Box<Expression>>,
+}
+impl Prefix {
+    pub fn string(&self) -> String {
+        let Some(right) = self.right.as_deref() else {
+            return "".to_string();
+        };
+        let out = format!("({}{})", self.operator, right.string());
+        out
+    }
+}
 
 #[derive(Debug)]
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
+    Prefix(Prefix),
 }
 impl Expression {
-    pub fn token_literal(&self) -> String {
-        match self {
-            Expression::Identifier(t) => t.token.t_literal.clone(),
-            Expression::IntegerLiteral(t) => t.token.t_literal.clone(),
-        }
-    }
+    // pub fn token_literal(&self) -> String {
+    //     match self {
+    //         Expression::Identifier(t) => t.token.t_literal.clone(),
+    //         Expression::IntegerLiteral(t) => t.token.t_literal.clone(),
+    //         Expression::Prefix(t) => todo!(),
+    //     }
+    // }
 
     pub fn string(&self) -> String {
         match self {
             Expression::Identifier(t) => t.string(),
             Expression::IntegerLiteral(t) => t.string(),
+            Expression::Prefix(t) => t.string(),
         }
     }
 }

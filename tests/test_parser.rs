@@ -33,6 +33,28 @@ fn test_let_statement(statement: &Statement, name: &str) {
     }
 }
 
+fn test_integer_literal(integer_literal: &Expression, value: i64) {
+    let Expression::IntegerLiteral(il) = integer_literal else {
+        panic!(
+            "Expression was not IntegerLiteral, ot: {:?}",
+            integer_literal
+        );
+    };
+
+    assert_eq!(
+        il.value, value,
+        "IntegerLiteral.value not {}, got: {}",
+        value, il.value
+    );
+    assert_eq!(
+        il.token.t_literal,
+        value.to_string(),
+        "IntegerLiteral.token.value not {}, got: {}",
+        value,
+        il.token.t_literal
+    );
+}
+
 fn check_parser_errors(parser: &Parser) {
     if parser.errors.is_empty() {
         return;
@@ -190,32 +212,34 @@ fn test_integer_literal_expression() {
         program.statements.len()
     );
 
-    if let Statement::Expression(e) = &program.statements[0] {
-        if let Some(exp) = &e.value {
-            if let Expression::IntegerLiteral(integer_literal) = exp.deref() {
-                assert_eq!(integer_literal.value, 5);
-                assert_eq!(integer_literal.token.t_literal, "5".to_string());
-            } else {
-                panic!("Expression isn't an IntegerLiteral")
-            }
-        } else {
-            panic!("Expression has no value")
-        }
-    } else {
+    let Statement::Expression(e) = &program.statements[0] else {
         panic!(
             "Expected Statement::Expression(..) got={:?}",
             program.statements[0]
         )
     };
+
+    let Some(Expression::IntegerLiteral(integer_literal)) = e.value.as_deref() else {
+        panic!(
+            "Expression is missing or not a IntegerLiteral. got={:?}",
+            e.value
+        );
+    };
+
+    assert_eq!(integer_literal.value, 5);
+    assert_eq!(integer_literal.token.t_literal, "5".to_string());
 }
 
 #[test]
 fn test_prefix_expressions() {
     let inputs = vec!["!5;", "-15;"];
-    let parsed_outputs = vec![("!", "5"), ("-", "15")];
+    let parsed_outputs: Vec<(&str, i64)> = vec![("!", 5), ("-", 15)];
 
     for i in 0..inputs.len() {
         let lexer = Lexer::new(inputs[i].to_string());
+        let expected_op = parsed_outputs[i].0;
+        let expected_value = parsed_outputs[i].1;
+
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();
@@ -227,5 +251,22 @@ fn test_prefix_expressions() {
             "program.Statements does not contain enough statements. got={}",
             program.statements.len()
         );
+
+        let Statement::Expression(e) = &program.statements[0] else {
+            panic!(
+                "Expected Statement::Expression(..) got={:?}",
+                program.statements[0]
+            )
+        };
+        let Some(Expression::Prefix(prefix)) = e.value.as_deref() else {
+            panic!("Expression is missing or not a Prefix. got={:?}", e.value);
+        };
+
+        assert_eq!(prefix.operator, expected_op);
+        let right = prefix
+            .right
+            .as_deref()
+            .expect("Could not parse expression on Right");
+        test_integer_literal(right, expected_value);
     }
 }

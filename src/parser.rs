@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
+        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Prefix, Program,
         ReturnStatement, Statement,
     },
     lexer::Lexer,
@@ -47,11 +47,11 @@ impl fmt::Display for ParserError {
 #[derive(Debug, Clone, Copy)]
 enum Precedence {
     Lowest, // Starting point
-            // Equals,      // == !=
-            // LessGreater, // < > <= >=
-            // Sum,         // + -
-            // Product,     // * /
-            // Prefix,      // -X !X
+    // Equals,      // == !=
+    // LessGreater, // < > <= >=
+    // Sum,         // + -
+    // Product,     // * /
+    Prefix, // -X !X
             // Call,        // fn()
 }
 
@@ -193,6 +193,8 @@ impl Parser {
         let left_expression = match self.current_token.t_type {
             TokenType::Ident => self.parse_identifier_expression()?,
             TokenType::Int => self.parse_integer_literal_expression()?,
+            TokenType::Bang => self.parse_prefix_expression()?,
+            TokenType::Minus => self.parse_prefix_expression()?,
             _ => return None,
         };
 
@@ -222,5 +224,20 @@ impl Parser {
             token: integer_literal_token,
             value: integer_literal_value,
         }))
+    }
+
+    fn parse_prefix_expression(&mut self) -> Option<Expression> {
+        let exp_token = self.current_token.clone();
+        let exp_operator = self.current_token.t_literal.clone();
+
+        self.next_token();
+
+        let exp_right = self.parse_expression(Precedence::Prefix);
+        let exp = Expression::Prefix(Prefix {
+            token: exp_token,
+            operator: exp_operator,
+            right: exp_right.map(Box::new),
+        });
+        Some(exp)
     }
 }
