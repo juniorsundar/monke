@@ -90,12 +90,30 @@ impl Prefix {
         out
     }
 }
+#[derive(Debug, Default)]
+pub struct Infix {
+    pub token: Token,
+    pub left: Option<Box<Expression>>,
+    pub operator: String,
+    pub right: Option<Box<Expression>>,
+}
+impl Infix {
+    pub fn string(&self) -> String {
+        let (Some(right), Some(left)) = (self.right.as_deref(), self.left.as_deref()) else {
+            return "".to_string();
+        };
+
+        let out = format!("({} {} {})", left.string(), self.operator, right.string());
+        out
+    }
+}
 
 #[derive(Debug)]
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
     Prefix(Prefix),
+    Infix(Infix),
 }
 impl Expression {
     // pub fn token_literal(&self) -> String {
@@ -111,6 +129,7 @@ impl Expression {
             Expression::Identifier(t) => t.string(),
             Expression::IntegerLiteral(t) => t.string(),
             Expression::Prefix(t) => t.string(),
+            Expression::Infix(t) => t.string(),
         }
     }
 }

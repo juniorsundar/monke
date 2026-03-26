@@ -232,7 +232,7 @@ fn test_integer_literal_expression() {
 
 #[test]
 fn test_prefix_expressions() {
-    let inputs = vec!["!5;", "-15;"];
+    let inputs = ["!5;", "-15;"];
     let parsed_outputs: Vec<(&str, i64)> = vec![("!", 5), ("-", 15)];
 
     for i in 0..inputs.len() {
@@ -268,5 +268,63 @@ fn test_prefix_expressions() {
             .as_deref()
             .expect("Could not parse expression on Right");
         test_integer_literal(right, expected_value);
+    }
+}
+
+#[test]
+fn test_infix_expressions() {
+    let inputs = [
+        "5 + 5;", "5 - 5;", "5 * 5;", "5 / 5;", "5 > 5;", "5 < 5;", "5 == 5;", "5 != 5;",
+    ];
+    let parsed_outputs: Vec<(i64, &str, i64)> = vec![
+        (5, "+", 5),
+        (5, "-", 5),
+        (5, "*", 5),
+        (5, "/", 5),
+        (5, ">", 5),
+        (5, "<", 5),
+        (5, "==", 5),
+        (5, "!=", 5),
+    ];
+
+    for i in 0..inputs.len() {
+        let lexer = Lexer::new(inputs[i].to_string());
+        let expected_lv = parsed_outputs[i].0;
+        let expected_op = parsed_outputs[i].1;
+        let expected_rv = parsed_outputs[i].2;
+
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "program.Statements does not contain enough statements. got={}",
+            program.statements.len()
+        );
+
+        let Statement::Expression(e) = &program.statements[0] else {
+            panic!(
+                "Expected Statement::Expression(..) got={:?}",
+                program.statements[0]
+            )
+        };
+        let Some(Expression::Infix(infix)) = e.value.as_deref() else {
+            panic!("Expression is missing or not a Infix. got={:?}", e.value);
+        };
+
+        let left = infix
+            .left
+            .as_deref()
+            .expect("Could not parse expression on Left");
+        test_integer_literal(left, expected_lv);
+        assert_eq!(infix.operator, expected_op);
+        let right = infix
+            .right
+            .as_deref()
+            .expect("Could not parse expression on Right");
+        test_integer_literal(right, expected_rv);
     }
 }

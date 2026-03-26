@@ -46,13 +46,13 @@ impl fmt::Display for ParserError {
 
 #[derive(Debug, Clone, Copy)]
 enum Precedence {
-    Lowest, // Starting point
-    // Equals,      // == !=
-    // LessGreater, // < > <= >=
-    // Sum,         // + -
-    // Product,     // * /
-    Prefix, // -X !X
-            // Call,        // fn()
+    Lowest,      // Starting point
+    Equals,      // == !=
+    LessGreater, // < > <= >=
+    Sum,         // + -
+    Product,     // * /
+    Prefix,      // -X !X
+    Call,        // fn()
 }
 
 pub struct Parser {
@@ -94,8 +94,36 @@ impl Parser {
         self.current_token.t_type == wanted_token.clone()
     }
 
+    fn current_precedence(&self) -> Precedence {
+        match self.current_token.t_type {
+            TokenType::Eq => Precedence::Equals,
+            TokenType::Neq => Precedence::Equals,
+            TokenType::Lt => Precedence::LessGreater,
+            TokenType::Gt => Precedence::LessGreater,
+            TokenType::Plus => Precedence::Sum,
+            TokenType::Minus => Precedence::Sum,
+            TokenType::Slash => Precedence::Product,
+            TokenType::Asterisk => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
+    }
+
     fn peek_token_is(&self, wanted_token: &TokenType) -> bool {
         self.peek_token.t_type == wanted_token.clone()
+    }
+
+    fn peek_precedence(&self) -> Precedence {
+        match self.peek_token.t_type {
+            TokenType::Eq => Precedence::Equals,
+            TokenType::Neq => Precedence::Equals,
+            TokenType::Lt => Precedence::LessGreater,
+            TokenType::Gt => Precedence::LessGreater,
+            TokenType::Plus => Precedence::Sum,
+            TokenType::Minus => Precedence::Sum,
+            TokenType::Slash => Precedence::Product,
+            TokenType::Asterisk => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
     }
 
     fn peek_error(&mut self, token: TokenType) {
