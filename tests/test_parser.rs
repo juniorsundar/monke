@@ -328,3 +328,44 @@ fn test_infix_expressions() {
         test_integer_literal(right, expected_rv);
     }
 }
+
+#[test]
+fn test_operator_precedence_parsing() {
+    let inputs = [
+        ("-a * b", "((-a) * b)"),
+        ("!-a", "(!(-a))"),
+        ("a + b + c", "((a + b) + c)"),
+        ("a + b - c", "((a + b) - c)"),
+        ("a * b * c", "((a * b) * c)"),
+        ("a * b / c", "((a * b) / c)"),
+        ("a + b / c", "(a + (b / c))"),
+        ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+        ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+        ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+        ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+        (
+            "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ),
+        (
+            "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ),
+    ];
+
+    for i in 0..inputs.len() {
+        let lexer = Lexer::new(inputs[i].0.to_string());
+        let mut parser = Parser::new(lexer);
+        let mut program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        let actual = program.string();
+        assert_eq!(
+            actual,
+            inputs[i].1.to_string(),
+            "Expected: {}, Got: {}",
+            actual,
+            inputs[i].1.to_string()
+        )
+    }
+}

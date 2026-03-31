@@ -55,7 +55,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -65,7 +65,7 @@ impl Identifier {
         self.value.clone()
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct IntegerLiteral {
     pub token: Token,
     pub value: i64,
@@ -75,7 +75,7 @@ impl IntegerLiteral {
         self.token.t_literal.clone()
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Prefix {
     pub token: Token,
     pub operator: String,
@@ -90,7 +90,7 @@ impl Prefix {
         out
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Infix {
     pub token: Token,
     pub left: Option<Box<Expression>>,
@@ -108,7 +108,7 @@ impl Infix {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),

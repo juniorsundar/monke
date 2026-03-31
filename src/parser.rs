@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Prefix, Program,
-        ReturnStatement, Statement,
+        Expression, ExpressionStatement, Identifier, Infix, IntegerLiteral, LetStatement, Prefix,
+        Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -44,7 +44,7 @@ impl fmt::Display for ParserError {
 //     Index, // array[index]
 // }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 enum Precedence {
     Lowest,      // Starting point
     Equals,      // == !=
@@ -52,7 +52,7 @@ enum Precedence {
     Sum,         // + -
     Product,     // * /
     Prefix,      // -X !X
-    Call,        // fn()
+                 // Call,        // fn()
 }
 
 pub struct Parser {
@@ -217,14 +217,29 @@ impl Parser {
         }))
     }
 
-    fn parse_expression(&mut self, _precedence: Precedence) -> Option<Expression> {
-        let left_expression = match self.current_token.t_type {
+    fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
+        let mut left_expression = match self.current_token.t_type {
             TokenType::Ident => self.parse_identifier_expression()?,
             TokenType::Int => self.parse_integer_literal_expression()?,
             TokenType::Bang => self.parse_prefix_expression()?,
             TokenType::Minus => self.parse_prefix_expression()?,
             _ => return None,
         };
+
+        while !self.peek_token_is(&TokenType::Semicolon) && precedence < self.peek_precedence() {
+            self.next_token();
+            left_expression = match self.current_token.t_type {
+                TokenType::Plus => self.parse_infix_expression(left_expression)?,
+                TokenType::Minus => self.parse_infix_expression(left_expression)?,
+                TokenType::Slash => self.parse_infix_expression(left_expression)?,
+                TokenType::Asterisk => self.parse_infix_expression(left_expression)?,
+                TokenType::Eq => self.parse_infix_expression(left_expression)?,
+                TokenType::Neq => self.parse_infix_expression(left_expression)?,
+                TokenType::Lt => self.parse_infix_expression(left_expression)?,
+                TokenType::Gt => self.parse_infix_expression(left_expression)?,
+                _ => return Some(left_expression),
+            };
+        }
 
         Some(left_expression)
     }
@@ -265,6 +280,23 @@ impl Parser {
             token: exp_token,
             operator: exp_operator,
             right: exp_right.map(Box::new),
+        });
+        Some(exp)
+    }
+
+    fn parse_infix_expression(&mut self, left_expression: Expression) -> Option<Expression> {
+        let exp_token = self.current_token.clone();
+        let exp_operator = self.current_token.t_literal.clone();
+        let left = Some(left_expression.clone());
+
+        let precedence = self.current_precedence();
+        self.next_token();
+        let right = self.parse_expression(precedence);
+        let exp = Expression::Infix(Infix {
+            token: exp_token,
+            operator: exp_operator,
+            left: left.map(Box::new),
+            right: right.map(Box::new),
         });
         Some(exp)
     }
