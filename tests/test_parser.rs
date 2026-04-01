@@ -6,6 +6,12 @@ use monke::{
     parser::Parser,
 };
 
+#[derive(Debug)]
+pub enum Expected<'a> {
+    Integer(i64),
+    Identifier(&'a str),
+}
+
 fn test_let_statement(statement: &Statement, name: &str) {
     assert_eq!(
         statement.token_literal(),
@@ -36,7 +42,7 @@ fn test_let_statement(statement: &Statement, name: &str) {
 fn test_integer_literal(integer_literal: &Expression, value: i64) {
     let Expression::IntegerLiteral(il) = integer_literal else {
         panic!(
-            "Expression was not IntegerLiteral, ot: {:?}",
+            "Expression was not IntegerLiteral, got: {:?}",
             integer_literal
         );
     };
@@ -53,6 +59,61 @@ fn test_integer_literal(integer_literal: &Expression, value: i64) {
         value,
         il.token.t_literal
     );
+}
+
+fn test_identifier(expression: &Expression, value: &str) {
+    let Expression::Identifier(ident) = expression else {
+        panic!("Expression was not Identifier, got: {:?}", expression);
+    };
+
+    assert_eq!(
+        ident.value, value,
+        "Identifier.value not {}, got: {}",
+        value, ident.value
+    );
+
+    assert_eq!(
+        ident.token.t_literal,
+        value.to_string(),
+        "Identifier.token.value not {}, got: {}",
+        value,
+        ident.token.t_literal
+    );
+}
+
+fn test_literal_expression(expression: &Expression, expected: Expected) {
+    match expected {
+        Expected::Integer(integer) => test_integer_literal(expression, integer),
+        Expected::Identifier(identifier) => test_identifier(expression, identifier),
+    }
+    panic!(
+        "Type mismatch or unhandled type. Got: {:?}, Expected: {:?}",
+        expression, expected
+    );
+}
+
+fn test_infix_expression(expression: &Expression, left: Expected, operator: &str, right: Expected) {
+    let Expression::Infix(infix) = expression else {
+        panic!("Expression was not Infix, got: {:?}", expression)
+    };
+
+    let Some(left_exp) = infix.left.as_deref() else {
+        panic!("Infix did not have left expression, got {:?}", infix.left);
+    };
+    test_literal_expression(left_exp, left);
+
+    assert_eq!(
+        infix.operator,
+        operator.to_string(),
+        "Operator is not {:?}, got {:?}",
+        operator,
+        infix.operator
+    );
+
+    let Some(right_exp) = infix.right.as_deref() else {
+        panic!("Infix did not have right expression, got {:?}", infix.right);
+    };
+    test_literal_expression(right_exp, right);
 }
 
 fn check_parser_errors(parser: &Parser) {

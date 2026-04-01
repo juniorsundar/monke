@@ -1,9 +1,6 @@
 use rustyline::{DefaultEditor, Result, error::ReadlineError};
 
-use crate::{
-    lexer::Lexer,
-    token::{Token, TokenType},
-};
+use crate::{lexer::Lexer, parser::Parser};
 
 pub fn start_repl() -> Result<()> {
     println!("Monke smart! Make read, Monke do!");
@@ -16,16 +13,13 @@ pub fn start_repl() -> Result<()> {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str())?;
-                let mut l = Lexer::new(line.to_string());
-                let mut next_token: Token;
-                loop {
-                    next_token = l.next_token();
-
-                    if next_token.t_type == TokenType::Eof {
-                        break;
-                    }
-                    println!("{:?}", next_token);
+                let l = Lexer::new(line.to_string());
+                let mut p = Parser::new(l);
+                let mut program = p.parse_program();
+                if !p.errors.is_empty() {
+                    println!("ERROR");
                 }
+                println!("{}", program.string());
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");

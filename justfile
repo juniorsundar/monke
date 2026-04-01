@@ -12,3 +12,6 @@ format:
 
 lint:
     cargo clippy --all-targets
+
+run:
+    cargo run
