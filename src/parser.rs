@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, Infix, IntegerLiteral, LetStatement, Prefix,
-        Program, ReturnStatement, Statement,
+        BooleanLiteral, Expression, ExpressionStatement, Identifier, Infix, IntegerLiteral,
+        LetStatement, Prefix, Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -223,6 +223,9 @@ impl Parser {
             TokenType::Int => self.parse_integer_literal_expression()?,
             TokenType::Bang => self.parse_prefix_expression()?,
             TokenType::Minus => self.parse_prefix_expression()?,
+            TokenType::True => self.parse_boolean_literal_expression()?,
+            TokenType::False => self.parse_boolean_literal_expression()?,
+            TokenType::Lparen => self.parse_grouped_expression()?,
             _ => return None,
         };
 
@@ -269,6 +272,16 @@ impl Parser {
         }))
     }
 
+    fn parse_boolean_literal_expression(&mut self) -> Option<Expression> {
+        let boolean_literal_token = self.current_token.clone();
+        let boolean_literal_value = self.current_token_is(&TokenType::True);
+
+        Some(Expression::BooleanLiteral(BooleanLiteral {
+            token: boolean_literal_token,
+            value: boolean_literal_value,
+        }))
+    }
+
     fn parse_prefix_expression(&mut self) -> Option<Expression> {
         let exp_token = self.current_token.clone();
         let exp_operator = self.current_token.t_literal.clone();
@@ -298,6 +311,17 @@ impl Parser {
             left: left.map(Box::new),
             right: right.map(Box::new),
         });
+        Some(exp)
+    }
+
+    fn parse_grouped_expression(&mut self) -> Option<Expression> {
+        self.next_token();
+        let exp = self.parse_expression(Precedence::Lowest)?;
+
+        if !self.expect_peek(&TokenType::Rparen) {
+            return None;
+        }
+
         Some(exp)
     }
 }

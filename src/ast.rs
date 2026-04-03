@@ -107,6 +107,16 @@ impl Infix {
         out
     }
 }
+#[derive(Debug, Default, Clone)]
+pub struct BooleanLiteral {
+    pub token: Token,
+    pub value: bool,
+}
+impl BooleanLiteral {
+    pub fn string(&self) -> String {
+        self.token.t_literal.clone()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -114,22 +124,16 @@ pub enum Expression {
     IntegerLiteral(IntegerLiteral),
     Prefix(Prefix),
     Infix(Infix),
+    BooleanLiteral(BooleanLiteral),
 }
 impl Expression {
-    // pub fn token_literal(&self) -> String {
-    //     match self {
-    //         Expression::Identifier(t) => t.token.t_literal.clone(),
-    //         Expression::IntegerLiteral(t) => t.token.t_literal.clone(),
-    //         Expression::Prefix(t) => todo!(),
-    //     }
-    // }
-
     pub fn string(&self) -> String {
         match self {
             Expression::Identifier(t) => t.string(),
             Expression::IntegerLiteral(t) => t.string(),
             Expression::Prefix(t) => t.string(),
             Expression::Infix(t) => t.string(),
+            Expression::BooleanLiteral(t) => t.string(),
         }
     }
 }

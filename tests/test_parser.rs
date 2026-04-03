@@ -10,6 +10,7 @@ use monke::{
 pub enum Expected<'a> {
     Integer(i64),
     Identifier(&'a str),
+    Bool(bool),
 }
 
 fn test_let_statement(statement: &Statement, name: &str) {
@@ -81,15 +82,32 @@ fn test_identifier(expression: &Expression, value: &str) {
     );
 }
 
+fn test_boolean_literal(expression: &Expression, value: bool) {
+    let Expression::BooleanLiteral(ident) = expression else {
+        panic!("Expression was not BooleanLiteral, got: {:?}", expression);
+    };
+
+    assert_eq!(
+        ident.value, value,
+        "BooleanLiteral.value not {}, got: {}",
+        value, ident.value
+    );
+
+    assert_eq!(
+        ident.token.t_literal,
+        value.to_string(),
+        "BooleanLiteral.token.value not {}, got: {}",
+        value,
+        ident.token.t_literal
+    );
+}
+
 fn test_literal_expression(expression: &Expression, expected: Expected) {
     match expected {
         Expected::Integer(integer) => test_integer_literal(expression, integer),
         Expected::Identifier(identifier) => test_identifier(expression, identifier),
+        Expected::Bool(bool) => test_boolean_literal(expression, bool),
     }
-    panic!(
-        "Type mismatch or unhandled type. Got: {:?}, Expected: {:?}",
-        expression, expected
-    );
 }
 
 fn test_infix_expression(expression: &Expression, left: Expected, operator: &str, right: Expected) {
@@ -292,9 +310,44 @@ fn test_integer_literal_expression() {
 }
 
 #[test]
-fn test_prefix_expressions() {
+fn test_boolean_literal_expression() {
+    let input = "true;";
+
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain enough statements. got={}",
+        program.statements.len()
+    );
+
+    let Statement::Expression(e) = &program.statements[0] else {
+        panic!(
+            "Expected Statement::Expression(..) got={:?}",
+            program.statements[0]
+        )
+    };
+
+    let Some(Expression::BooleanLiteral(boolean_literal)) = e.value.as_deref() else {
+        panic!(
+            "Expression is missing or not a BooleanLiteral. got={:?}",
+            e.value
+        );
+    };
+
+    assert!(boolean_literal.value);
+    assert_eq!(boolean_literal.token.t_literal, "true".to_string());
+}
+
+#[test]
+fn test_numeric_prefix_expressions() {
     let inputs = ["!5;", "-15;"];
-    let parsed_outputs: Vec<(&str, i64)> = vec![("!", 5), ("-", 15)];
+    let parsed_outputs = [("!", 5), ("-", 15)];
 
     for i in 0..inputs.len() {
         let lexer = Lexer::new(inputs[i].to_string());
@@ -328,12 +381,53 @@ fn test_prefix_expressions() {
             .right
             .as_deref()
             .expect("Could not parse expression on Right");
-        test_integer_literal(right, expected_value);
+        test_literal_expression(right, Expected::Integer(expected_value));
     }
 }
 
 #[test]
-fn test_infix_expressions() {
+fn test_boolean_prefix_expressions() {
+    let inputs = ["!true;", "!false;"];
+    let parsed_outputs = [("!", true), ("!", false)];
+
+    for i in 0..inputs.len() {
+        let lexer = Lexer::new(inputs[i].to_string());
+        let expected_op = parsed_outputs[i].0;
+        let expected_value = parsed_outputs[i].1;
+
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "program.Statements does not contain enough statements. got={}",
+            program.statements.len()
+        );
+
+        let Statement::Expression(e) = &program.statements[0] else {
+            panic!(
+                "Expected Statement::Expression(..) got={:?}",
+                program.statements[0]
+            )
+        };
+        let Some(Expression::Prefix(prefix)) = e.value.as_deref() else {
+            panic!("Expression is missing or not a Prefix. got={:?}", e.value);
+        };
+
+        assert_eq!(prefix.operator, expected_op);
+        let right = prefix
+            .right
+            .as_deref()
+            .expect("Could not parse expression on Right");
+        test_literal_expression(right, Expected::Bool(expected_value));
+    }
+}
+
+#[test]
+fn test_infix_numeric_expressions() {
     let inputs = [
         "5 + 5;", "5 - 5;", "5 * 5;", "5 / 5;", "5 > 5;", "5 < 5;", "5 == 5;", "5 != 5;",
     ];
@@ -372,21 +466,64 @@ fn test_infix_expressions() {
                 program.statements[0]
             )
         };
+
         let Some(Expression::Infix(infix)) = e.value.as_deref() else {
             panic!("Expression is missing or not a Infix. got={:?}", e.value);
         };
 
-        let left = infix
-            .left
-            .as_deref()
-            .expect("Could not parse expression on Left");
-        test_integer_literal(left, expected_lv);
-        assert_eq!(infix.operator, expected_op);
-        let right = infix
-            .right
-            .as_deref()
-            .expect("Could not parse expression on Right");
-        test_integer_literal(right, expected_rv);
+        test_infix_expression(
+            &Expression::Infix(infix.clone()),
+            Expected::Integer(expected_lv),
+            expected_op,
+            Expected::Integer(expected_rv),
+        );
+    }
+}
+
+#[test]
+fn test_infix_boolean_expressions() {
+    let inputs = ["true == true", "true != false", "false == false"];
+    let parsed_outputs: Vec<(bool, &str, bool)> = vec![
+        (true, "==", true),
+        (true, "!=", false),
+        (false, "==", false),
+    ];
+
+    for i in 0..inputs.len() {
+        let lexer = Lexer::new(inputs[i].to_string());
+        let expected_lv = parsed_outputs[i].0;
+        let expected_op = parsed_outputs[i].1;
+        let expected_rv = parsed_outputs[i].2;
+
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "program.Statements does not contain enough statements. got={}",
+            program.statements.len()
+        );
+
+        let Statement::Expression(e) = &program.statements[0] else {
+            panic!(
+                "Expected Statement::Expression(..) got={:?}",
+                program.statements[0]
+            )
+        };
+
+        let Some(Expression::Infix(infix)) = e.value.as_deref() else {
+            panic!("Expression is missing or not a Infix. got={:?}", e.value);
+        };
+
+        test_infix_expression(
+            &Expression::Infix(infix.clone()),
+            Expected::Bool(expected_lv),
+            expected_op,
+            Expected::Bool(expected_rv),
+        );
     }
 }
 
@@ -412,21 +549,24 @@ fn test_operator_precedence_parsing() {
             "3 + 4 * 5 == 3 * 1 + 4 * 5",
             "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
         ),
+        ("true", "true"),
+        ("false", "false"),
+        ("3 > 5 == false", "((3 > 5) == false)"),
+        ("3 < 5 == true", "((3 < 5) == true)"),
+        ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+        ("(5 + 5) * 2", "((5 + 5) * 2)"),
+        ("2 / (5 + 5)", "(2 / (5 + 5))"),
+        ("-(5 + 5)", "(-(5 + 5))"),
+        ("!(true == true)", "(!(true == true))"),
     ];
 
-    for i in 0..inputs.len() {
-        let lexer = Lexer::new(inputs[i].0.to_string());
+    for item in &inputs {
+        let lexer = Lexer::new(item.0.to_string());
         let mut parser = Parser::new(lexer);
         let mut program = parser.parse_program();
         check_parser_errors(&parser);
 
         let actual = program.string();
-        assert_eq!(
-            actual,
-            inputs[i].1.to_string(),
-            "Expected: {}, Got: {}",
-            actual,
-            inputs[i].1.to_string()
-        )
+        assert_eq!(actual, item.1, "Expected: {}, Got: {}", item.1, actual)
     }
 }
