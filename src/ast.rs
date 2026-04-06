@@ -1,12 +1,34 @@
 #![allow(clippy::single_char_add_str)]
 use crate::token::Token;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct LetStatement {
+    pub token: Token,
+    pub name: Identifier,
+    pub value: Option<Box<Expression>>,
+}
+#[derive(Debug, Clone)]
+pub struct ReturnStatement {
+    pub token: Token,
+    pub value: Option<Box<Expression>>,
+}
+#[derive(Debug, Clone)]
+pub struct ExpressionStatement {
+    pub token: Token,
+    pub value: Option<Box<Expression>>,
+}
+#[derive(Debug, Clone)]
+pub struct BlockStatement {
+    pub token: Token,
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
-    If,
+    Block(BlockStatement),
 }
 impl Statement {
     pub fn token_literal(&self) -> String {
@@ -14,7 +36,7 @@ impl Statement {
             Statement::Let(t) => t.token.t_literal.clone(),
             Statement::Return(t) => t.token.t_literal.clone(),
             Statement::Expression(t) => t.token.t_literal.clone(),
-            _ => "".to_string(),
+            Statement::Block(t) => t.token.t_literal.clone(),
         }
     }
 
@@ -50,12 +72,19 @@ impl Statement {
                 }
                 "".to_string()
             }
-            _ => "".to_string(),
+            Statement::Block(t) => {
+                let mut out = String::new();
+
+                for s in t.statements.iter() {
+                    out.push_str(&s.string());
+                }
+                out
+            }
         }
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -65,7 +94,7 @@ impl Identifier {
         self.value.clone()
     }
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct IntegerLiteral {
     pub token: Token,
     pub value: i64,
@@ -75,7 +104,7 @@ impl IntegerLiteral {
         self.token.t_literal.clone()
     }
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Prefix {
     pub token: Token,
     pub operator: String,
@@ -90,7 +119,7 @@ impl Prefix {
         out
     }
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Infix {
     pub token: Token,
     pub left: Option<Box<Expression>>,
@@ -107,7 +136,7 @@ impl Infix {
         out
     }
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct BooleanLiteral {
     pub token: Token,
     pub value: bool,
@@ -115,6 +144,36 @@ pub struct BooleanLiteral {
 impl BooleanLiteral {
     pub fn string(&self) -> String {
         self.token.t_literal.clone()
+    }
+}
+#[derive(Debug, Clone)]
+pub struct If {
+    pub token: Token,
+    pub condition: Option<Box<Expression>>,
+    pub consequence: Statement,
+    pub alternative: Option<Statement>,
+}
+impl If {
+    pub fn string(&self) -> String {
+        let mut out = String::new();
+        out.push_str("if");
+        let Some(cond) = self.condition.as_deref() else {
+            return "".to_string();
+        };
+        out.push_str(&cond.string());
+        out.push_str(" ");
+        match (&self.consequence, &self.alternative) {
+            (Statement::Block(_), Some(alt_st)) => {
+                out.push_str(&self.consequence.string());
+                out.push_str(" else ");
+                out.push_str(&alt_st.string());
+            }
+            (Statement::Block(_), None) => {
+                out.push_str(&self.consequence.string());
+            }
+            _ => return "".to_string(),
+        }
+        out
     }
 }
 
@@ -125,6 +184,7 @@ pub enum Expression {
     Prefix(Prefix),
     Infix(Infix),
     BooleanLiteral(BooleanLiteral),
+    If(If),
 }
 impl Expression {
     pub fn string(&self) -> String {
@@ -134,25 +194,9 @@ impl Expression {
             Expression::Prefix(t) => t.string(),
             Expression::Infix(t) => t.string(),
             Expression::BooleanLiteral(t) => t.string(),
+            Expression::If(t) => t.string(),
         }
     }
-}
-
-#[derive(Debug)]
-pub struct LetStatement {
-    pub token: Token,
-    pub name: Identifier,
-    pub value: Option<Box<Expression>>,
-}
-#[derive(Debug)]
-pub struct ReturnStatement {
-    pub token: Token,
-    pub value: Option<Box<Expression>>,
-}
-#[derive(Debug)]
-pub struct ExpressionStatement {
-    pub token: Token,
-    pub value: Option<Box<Expression>>,
 }
 
 pub struct Program {

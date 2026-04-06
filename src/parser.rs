@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        BooleanLiteral, Expression, ExpressionStatement, Identifier, Infix, IntegerLiteral,
-        LetStatement, Prefix, Program, ReturnStatement, Statement,
+        BlockStatement, BooleanLiteral, Expression, ExpressionStatement, Identifier, If, Infix,
+        IntegerLiteral, LetStatement, Prefix, Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -190,17 +190,17 @@ impl Parser {
             token: Token::default(),
             value: "".to_string(),
         }));
-        let statement = Some(Statement::Return(ReturnStatement {
+        let statement = Statement::Return(ReturnStatement {
             token: statement_token,
             value: Some(statement_value),
-        }));
+        });
 
         self.next_token();
         while !self.current_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
 
-        statement
+        Some(statement)
     }
 
     fn parse_expression_statement(&mut self) -> Option<Statement> {
@@ -226,6 +226,7 @@ impl Parser {
             TokenType::True => self.parse_boolean_literal_expression()?,
             TokenType::False => self.parse_boolean_literal_expression()?,
             TokenType::Lparen => self.parse_grouped_expression()?,
+            TokenType::If => self.parse_if_expression()?,
             _ => return None,
         };
 
@@ -323,5 +324,60 @@ impl Parser {
         }
 
         Some(exp)
+    }
+
+    fn parse_if_expression(&mut self) -> Option<Expression> {
+        let exp_token = self.current_token.clone();
+
+        if !self.expect_peek(&TokenType::Lparen) {
+            return None;
+        }
+
+        self.next_token();
+        let exp_condition = self.parse_expression(Precedence::Lowest);
+
+        if !self.expect_peek(&TokenType::Rparen) {
+            return None;
+        }
+
+        if !self.expect_peek(&TokenType::Lbrace) {
+            return None;
+        }
+
+        let exp_consequence = self.parse_block_statment()?;
+        let exp = Expression::If(If {
+            token: exp_token,
+            condition: exp_condition.map(Box::new),
+            consequence: exp_consequence,
+            alternative: None,
+        });
+
+        Some(exp)
+    }
+
+    fn parse_block_statment(&mut self) -> Option<Statement> {
+        let block_stmt_token = self.current_token.clone();
+        let mut block_stmt_statements = Vec::<Statement>::new();
+
+        self.next_token();
+
+        while !self.current_token_is(&TokenType::Rbrace) && !self.current_token_is(&TokenType::Eof)
+        {
+            match self.parse_statement() {
+                Some(stmt) => {
+                    block_stmt_statements.push(stmt);
+                }
+                None => {
+                    return None;
+                }
+            }
+            self.next_token();
+        }
+
+        let block_stmt = Statement::Block(BlockStatement {
+            token: block_stmt_token,
+            statements: block_stmt_statements,
+        });
+        Some(block_stmt)
     }
 }
