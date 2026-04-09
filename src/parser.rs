@@ -345,11 +345,23 @@ impl Parser {
         }
 
         let exp_consequence = self.parse_block_statment()?;
+        let mut exp_alternative: Option<Statement> = None;
+
+        if self.peek_token_is(&TokenType::Else) {
+            self.next_token();
+
+            if !self.expect_peek(&TokenType::Lbrace) {
+                return None;
+            }
+
+            exp_alternative = self.parse_block_statment();
+        }
+
         let exp = Expression::If(If {
             token: exp_token,
             condition: exp_condition.map(Box::new),
             consequence: exp_consequence,
-            alternative: None,
+            alternative: exp_alternative,
         });
 
         Some(exp)

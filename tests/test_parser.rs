@@ -628,4 +628,135 @@ fn test_if_expressions() {
         "consequence.Statements does not container 1 statement. got={}",
         consequence_block.statements.len()
     );
+
+    let Statement::Expression(consequence_expression) = &consequence_block.statements[0] else {
+        panic!(
+            "Consequence is not an ExpressionStatement. got={:?}",
+            consequence_block.statements[0]
+        )
+    };
+
+    let Some(Expression::Identifier(consequence_identifier)) =
+        consequence_expression.value.as_deref()
+    else {
+        panic!(
+            "Consequence expression is not an Identifier. got={:?}",
+            consequence_expression.value
+        )
+    };
+
+    test_identifier(&Expression::Identifier(consequence_identifier.clone()), "x");
+
+    if if_exp.alternative.is_some() {
+        panic!(
+            "Alternative statement was not None. got={:?}",
+            if_exp.alternative
+        )
+    }
+}
+
+#[test]
+fn test_if_else_expressions() {
+    let input = "if (x < y) { x } else { y }";
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain 1 statements. got={}",
+        program.statements.len()
+    );
+
+    let Statement::Expression(e) = program.statements[0].clone() else {
+        panic!(
+            "Expected Statement::Expression(..) got={:?}",
+            program.statements[0]
+        )
+    };
+
+    let Some(Expression::If(if_exp)) = e.value.as_deref() else {
+        panic!(
+            "Expression is missing or not a IfExpression. got={:?}",
+            e.value
+        )
+    };
+
+    let Some(Expression::Infix(condition)) = if_exp.condition.as_deref() else {
+        panic!(
+            "Condition is not an InfixExpression. got={:?}",
+            if_exp.condition
+        )
+    };
+
+    test_infix_expression(
+        &Expression::Infix(condition.clone()),
+        Expected::Identifier("x"),
+        "<",
+        Expected::Identifier("y"),
+    );
+
+    let Statement::Block(consequence_block) = &if_exp.consequence else {
+        panic!(
+            "Consequence is not a BlockStatement. got={:?}",
+            if_exp.consequence
+        )
+    };
+
+    assert_eq!(
+        consequence_block.statements.len(),
+        1,
+        "consequence.Statements does not container 1 statement. got={}",
+        consequence_block.statements.len()
+    );
+
+    let Statement::Expression(consequence_expression) = &consequence_block.statements[0] else {
+        panic!(
+            "Consequence is not an ExpressionStatement. got={:?}",
+            consequence_block.statements[0]
+        )
+    };
+
+    let Some(Expression::Identifier(consequence_identifier)) =
+        consequence_expression.value.as_deref()
+    else {
+        panic!(
+            "Consequence expression is not an Identifier. got={:?}",
+            consequence_expression.value
+        )
+    };
+
+    test_identifier(&Expression::Identifier(consequence_identifier.clone()), "x");
+
+    let Some(Statement::Block(alternative_block)) = &if_exp.alternative else {
+        panic!("Alternative statement was None")
+    };
+
+    assert_eq!(
+        alternative_block.statements.len(),
+        1,
+        "alternative.Statements does not container 1 statement. got={}",
+        alternative_block.statements.len()
+    );
+
+    let Statement::Expression(alternative_expression) = &alternative_block.statements[0] else {
+        panic!(
+            "alternative is not an ExpressionStatement. got={:?}",
+            alternative_block.statements[0]
+        )
+    };
+
+    let Some(Expression::Identifier(alternative_identifier)) =
+        alternative_expression.value.as_deref()
+    else {
+        panic!(
+            "alternative expression is not an Identifier. got={:?}",
+            alternative_expression.value
+        )
+    };
+
+    test_identifier(&Expression::Identifier(alternative_identifier.clone()), "y");
 }
