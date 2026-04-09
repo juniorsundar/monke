@@ -176,6 +176,29 @@ impl If {
         out
     }
 }
+#[derive(Debug, Clone)]
+pub struct FunctionLiteral {
+    pub token: Token,
+    pub parameters: Vec<Expression>, // Has to be Identifier
+    pub body: Statement,
+}
+impl FunctionLiteral {
+    pub fn string(&self) -> String {
+        let mut out = String::new();
+
+        out.push_str(&self.token.t_literal);
+        out.push_str("(");
+        let mut params: Vec<String> = Vec::new();
+        for param in &self.parameters {
+            params.push(param.string());
+        }
+        let joined_param: String = params.join(",");
+        out.push_str(&joined_param);
+        out.push_str(")");
+        out.push_str(&self.body.string());
+        out
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -185,6 +208,7 @@ pub enum Expression {
     Infix(Infix),
     BooleanLiteral(BooleanLiteral),
     If(If),
+    FunctionLiteral(FunctionLiteral),
 }
 impl Expression {
     pub fn string(&self) -> String {
@@ -195,6 +219,7 @@ impl Expression {
             Expression::Infix(t) => t.string(),
             Expression::BooleanLiteral(t) => t.string(),
             Expression::If(t) => t.string(),
+            Expression::FunctionLiteral(t) => t.string(),
         }
     }
 }

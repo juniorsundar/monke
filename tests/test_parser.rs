@@ -760,3 +760,27 @@ fn test_if_else_expressions() {
 
     test_identifier(&Expression::Identifier(alternative_identifier.clone()), "y");
 }
+
+#[test]
+fn test_function_literal_statement_parsing() {
+    let input = "fn(x, y) { x + y; }";
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain 1 statements. got={}",
+        program.statements.len()
+    );
+
+    let Statement::Expression(e) = program.statements[0].clone() else {
+        panic!(
+            "Expected Statement::Expression(..) got={:?}",
+            program.statements[0]
+        )
+    };
+}
