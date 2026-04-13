@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        BlockStatement, BooleanLiteral, Expression, ExpressionStatement, FunctionLiteral,
+        BlockStatement, BooleanLiteral, Call, Expression, ExpressionStatement, FunctionLiteral,
         Identifier, If, Infix, IntegerLiteral, LetStatement, Prefix, Program, ReturnStatement,
         Statement,
     },
@@ -27,24 +27,6 @@ impl fmt::Display for ParserError {
     }
 }
 
-// #[derive(Debug, Clone, Copy)]
-// enum PrefixParser {
-//     Identifier,
-//     // Integer,
-//     // Boolean,
-//     // PrefixOperator, // for !x, -x
-//     // GroupedExpression,
-//     // IfExpression,
-//     // FunctionLiteral,
-// }
-
-// #[derive(Clone, Copy)]
-// enum InfixParser {
-//     InfixOperator, // +, -, *, /
-//     Call,
-//     Index, // array[index]
-// }
-
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 enum Precedence {
     Lowest,      // Starting point
@@ -53,7 +35,7 @@ enum Precedence {
     Sum,         // + -
     Product,     // * /
     Prefix,      // -X !X
-                 // Call,        // fn()
+    Call,        // fn()
 }
 
 pub struct Parser {
@@ -105,6 +87,7 @@ impl Parser {
             TokenType::Minus => Precedence::Sum,
             TokenType::Slash => Precedence::Product,
             TokenType::Asterisk => Precedence::Product,
+            TokenType::Lparen => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }
@@ -123,6 +106,7 @@ impl Parser {
             TokenType::Minus => Precedence::Sum,
             TokenType::Slash => Precedence::Product,
             TokenType::Asterisk => Precedence::Product,
+            TokenType::Lparen => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }
@@ -243,6 +227,7 @@ impl Parser {
                 TokenType::Neq => self.parse_infix_expression(left_expression)?,
                 TokenType::Lt => self.parse_infix_expression(left_expression)?,
                 TokenType::Gt => self.parse_infix_expression(left_expression)?,
+                TokenType::Lparen => self.parse_call_expression(left_expression)?,
                 _ => return Some(left_expression),
             };
         }
@@ -460,5 +445,41 @@ impl Parser {
         }
 
         Some(identifiers)
+    }
+
+    fn parse_call_expression(&mut self, left_expression: Expression) -> Option<Expression> {
+        let exp_token = self.current_token.clone();
+        let exp_function = left_expression.clone();
+        let exp_arguments = self.parse_call_arguments()?;
+
+        Some(Expression::Call(Call {
+            token: exp_token,
+            function: Box::new(exp_function),
+            arguments: exp_arguments,
+        }))
+    }
+
+    fn parse_call_arguments(&mut self) -> Option<Vec<Expression>> {
+        let mut args = Vec::<Expression>::new();
+
+        if self.peek_token_is(&TokenType::Rparen) {
+            self.next_token();
+            return Some(args);
+        }
+
+        self.next_token();
+        args.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.peek_token_is(&TokenType::Comma) {
+            self.next_token();
+            self.next_token();
+            args.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        if !self.expect_peek(&TokenType::Rparen) {
+            return None;
+        }
+
+        Some(args)
     }
 }

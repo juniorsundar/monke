@@ -558,6 +558,15 @@ fn test_operator_precedence_parsing() {
         ("2 / (5 + 5)", "(2 / (5 + 5))"),
         ("-(5 + 5)", "(-(5 + 5))"),
         ("!(true == true)", "(!(true == true))"),
+        ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+        (
+            "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+            "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        ),
+        (
+            "add(a + b + c * d / f + g)",
+            "add((((a + b) + ((c * d) / f)) + g))",
+        ),
     ];
 
     for item in &inputs {
@@ -820,5 +829,102 @@ fn test_function_literal_statement_parsing() {
         Expected::Identifier("x"),
         "+",
         Expected::Identifier("y"),
+    );
+}
+
+#[test]
+fn test_function_parameter_parsing() {
+    let inputs_expected = [
+        ("fn() {};", vec![]),
+        ("fn(x) {};", vec!["x"]),
+        ("fn(x, y, z) {};", vec!["x", "y", "z"]),
+    ];
+
+    for i in inputs_expected.iter() {
+        let lexer = Lexer::new(i.0.to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        let Statement::Expression(e) = program.statements[0].clone() else {
+            panic!(
+                "Expected Statement::Expression(..) got={:?}",
+                program.statements[0]
+            )
+        };
+
+        let Some(Expression::FunctionLiteral(func_exp)) = e.value.as_deref() else {
+            panic!(
+                "Expression is not Expression::FunctionLiteral. got={:?}",
+                e.value
+            )
+        };
+
+        assert_eq!(
+            func_exp.parameters.len(),
+            i.1.len(),
+            "Length of parameters incorrect. want={}, got={}",
+            i.1.len(),
+            func_exp.parameters.len()
+        );
+
+        for pair in func_exp.parameters.iter().zip(i.1.iter()) {
+            test_literal_expression(
+                &Expression::Identifier(pair.0.clone()),
+                Expected::Identifier(pair.1),
+            );
+        }
+    }
+}
+
+#[test]
+fn test_call_expression_parsing() {
+    let input = "add(1, 2 * 3, 4 + 5);";
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain 1 statements. got={}",
+        program.statements.len()
+    );
+
+    let Statement::Expression(exp) = &program.statements[0] else {
+        panic!(
+            "Statement is not ExpressionStatement, got={:?}",
+            program.statements[0]
+        );
+    };
+
+    let Some(Expression::Call(call_exp)) = exp.value.as_deref() else {
+        panic!("Expression is not Call. got={:?}", exp.value.as_deref());
+    };
+
+    test_identifier(call_exp.function.as_ref(), "add");
+
+    assert_eq!(
+        call_exp.arguments.len(),
+        3,
+        "Wrong length of arguments. got={}",
+        call_exp.arguments.len()
+    );
+
+    test_literal_expression(&call_exp.arguments[0], Expected::Integer(1));
+    test_infix_expression(
+        &call_exp.arguments[1],
+        Expected::Integer(2),
+        "*",
+        Expected::Integer(3),
+    );
+    test_infix_expression(
+        &call_exp.arguments[2],
+        Expected::Integer(4),
+        "+",
+        Expected::Integer(5),
     );
 }

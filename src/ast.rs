@@ -194,6 +194,28 @@ impl FunctionLiteral {
         out
     }
 }
+#[derive(Debug, Clone)]
+pub struct Call {
+    pub token: Token,
+    pub function: Box<Expression>, // Identifer or FunctionLiteral
+    pub arguments: Vec<Expression>,
+}
+impl Call {
+    pub fn string(&self) -> String {
+        let mut out = String::new();
+        let mut args = Vec::<String>::new();
+        for arg in self.arguments.iter() {
+            args.push(arg.string());
+        }
+
+        out.push_str(&self.function.string());
+        out.push_str("(");
+        out.push_str(&args.join(", "));
+        out.push_str(")");
+
+        out
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -204,6 +226,7 @@ pub enum Expression {
     BooleanLiteral(BooleanLiteral),
     If(If),
     FunctionLiteral(FunctionLiteral),
+    Call(Call),
 }
 impl Expression {
     pub fn string(&self) -> String {
@@ -215,6 +238,7 @@ impl Expression {
             Expression::BooleanLiteral(t) => t.string(),
             Expression::If(t) => t.string(),
             Expression::FunctionLiteral(t) => t.string(),
+            Expression::Call(t) => t.string(),
         }
     }
 }
