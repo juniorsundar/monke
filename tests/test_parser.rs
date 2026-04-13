@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use monke::{
-    ast::{Expression, Statement},
+    ast::{BlockStatement, Expression, Statement},
     lexer::Lexer,
     parser::Parser,
 };
@@ -615,12 +615,7 @@ fn test_if_expressions() {
         Expected::Identifier("y"),
     );
 
-    let Statement::Block(consequence_block) = &if_exp.consequence else {
-        panic!(
-            "Consequence is not a BlockStatement. got={:?}",
-            if_exp.consequence
-        )
-    };
+    let consequence_block: &BlockStatement = &if_exp.consequence;
 
     assert_eq!(
         consequence_block.statements.len(),
@@ -699,12 +694,7 @@ fn test_if_else_expressions() {
         Expected::Identifier("y"),
     );
 
-    let Statement::Block(consequence_block) = &if_exp.consequence else {
-        panic!(
-            "Consequence is not a BlockStatement. got={:?}",
-            if_exp.consequence
-        )
-    };
+    let consequence_block: &BlockStatement = &if_exp.consequence;
 
     assert_eq!(
         consequence_block.statements.len(),
@@ -731,7 +721,7 @@ fn test_if_else_expressions() {
 
     test_identifier(&Expression::Identifier(consequence_identifier.clone()), "x");
 
-    let Some(Statement::Block(alternative_block)) = &if_exp.alternative else {
+    let Some(alternative_block) = &if_exp.alternative else {
         panic!("Alternative statement was None")
     };
 
@@ -783,4 +773,52 @@ fn test_function_literal_statement_parsing() {
             program.statements[0]
         )
     };
+
+    let Some(Expression::FunctionLiteral(func_exp)) = e.value.as_deref() else {
+        panic!(
+            "Expression is not Expression::FunctionLiteral. got={:?}",
+            e.value
+        )
+    };
+
+    assert_eq!(
+        func_exp.parameters.len(),
+        2,
+        "function literal contains incorrect parameters. Wanted 2, got={:?}",
+        func_exp.parameters.len()
+    );
+
+    test_literal_expression(
+        &Expression::Identifier(func_exp.parameters[0].clone()),
+        Expected::Identifier("x"),
+    );
+    test_literal_expression(
+        &Expression::Identifier(func_exp.parameters[1].clone()),
+        Expected::Identifier("y"),
+    );
+
+    assert_eq!(
+        func_exp.body.statements.len(),
+        1,
+        "function body has more than 1 statements, got={:?}",
+        func_exp.body.statements.len()
+    );
+
+    let Statement::Expression(exp_body) = &func_exp.body.statements[0] else {
+        panic!(
+            "Function body statement is not Statement::Expression. got={:?}",
+            func_exp.body.statements[0]
+        );
+    };
+
+    let Some(exp) = &exp_body.value.as_deref() else {
+        panic!("ExpressionStatement.value is None. Expected an Infix expression.");
+    };
+
+    test_infix_expression(
+        exp,
+        Expected::Identifier("x"),
+        "+",
+        Expected::Identifier("y"),
+    );
 }

@@ -150,8 +150,8 @@ impl BooleanLiteral {
 pub struct If {
     pub token: Token,
     pub condition: Option<Box<Expression>>,
-    pub consequence: Statement,
-    pub alternative: Option<Statement>,
+    pub consequence: BlockStatement,
+    pub alternative: Option<BlockStatement>,
 }
 impl If {
     pub fn string(&self) -> String {
@@ -162,16 +162,10 @@ impl If {
         };
         out.push_str(&cond.string());
         out.push_str(" ");
-        match (&self.consequence, &self.alternative) {
-            (Statement::Block(_), Some(alt_st)) => {
-                out.push_str(&self.consequence.string());
-                out.push_str(" else ");
-                out.push_str(&alt_st.string());
-            }
-            (Statement::Block(_), None) => {
-                out.push_str(&self.consequence.string());
-            }
-            _ => return "".to_string(),
+        out.push_str(&Statement::Block(self.consequence.clone()).string());
+        if let Some(alt) = &self.alternative {
+            out.push_str(" else ");
+            out.push_str(&Statement::Block(alt.clone()).string());
         }
         out
     }
@@ -179,8 +173,8 @@ impl If {
 #[derive(Debug, Clone)]
 pub struct FunctionLiteral {
     pub token: Token,
-    pub parameters: Vec<Expression>, // Has to be Identifier
-    pub body: Statement,
+    pub parameters: Vec<Identifier>, // Has to be Identifier
+    pub body: BlockStatement,        // Has to be Block
 }
 impl FunctionLiteral {
     pub fn string(&self) -> String {
@@ -195,7 +189,8 @@ impl FunctionLiteral {
         let joined_param: String = params.join(",");
         out.push_str(&joined_param);
         out.push_str(")");
-        out.push_str(&self.body.string());
+        let block_wrapper = Statement::Block(self.body.clone());
+        out.push_str(&block_wrapper.string());
         out
     }
 }

@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        BlockStatement, BooleanLiteral, Expression, ExpressionStatement, Identifier, If, Infix,
-        IntegerLiteral, LetStatement, Prefix, Program, ReturnStatement, Statement,
+        BlockStatement, BooleanLiteral, Expression, ExpressionStatement, FunctionLiteral,
+        Identifier, If, Infix, IntegerLiteral, LetStatement, Prefix, Program, ReturnStatement,
+        Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -227,6 +228,7 @@ impl Parser {
             TokenType::False => self.parse_boolean_literal_expression()?,
             TokenType::Lparen => self.parse_grouped_expression()?,
             TokenType::If => self.parse_if_expression()?,
+            TokenType::Function => self.parse_function_literal_expression()?,
             _ => return None,
         };
 
@@ -344,8 +346,10 @@ impl Parser {
             return None;
         }
 
-        let exp_consequence = self.parse_block_statment()?;
-        let mut exp_alternative: Option<Statement> = None;
+        let Statement::Block(exp_consequence) = self.parse_block_statment()? else {
+            return None;
+        };
+        let mut exp_alternative: Option<BlockStatement> = None;
 
         if self.peek_token_is(&TokenType::Else) {
             self.next_token();
@@ -354,7 +358,10 @@ impl Parser {
                 return None;
             }
 
-            exp_alternative = self.parse_block_statment();
+            let alt_block = self.parse_block_statment();
+            if let Some(Statement::Block(alt)) = alt_block {
+                exp_alternative = Some(alt);
+            }
         }
 
         let exp = Expression::If(If {
@@ -391,5 +398,67 @@ impl Parser {
             statements: block_stmt_statements,
         });
         Some(block_stmt)
+    }
+
+    fn parse_function_literal_expression(&mut self) -> Option<Expression> {
+        let exp_token = self.current_token.clone();
+
+        if !self.expect_peek(&TokenType::Lparen) {
+            return None;
+        }
+
+        let exp_parameters = self.parse_function_parameters()?;
+
+        if !self.expect_peek(&TokenType::Lbrace) {
+            return None;
+        }
+
+        let Statement::Block(exp_body) = self.parse_block_statment()? else {
+            return None;
+        };
+
+        let exp = Expression::FunctionLiteral(FunctionLiteral {
+            token: exp_token,
+            parameters: exp_parameters,
+            body: exp_body,
+        });
+
+        Some(exp)
+    }
+
+    fn parse_function_parameters(&mut self) -> Option<Vec<Identifier>> {
+        let mut identifiers = Vec::<Identifier>::new();
+
+        if self.peek_token_is(&TokenType::Rparen) {
+            self.next_token();
+            return Some(identifiers);
+        }
+
+        self.next_token();
+
+        let ident = Identifier {
+            token: self.current_token.clone(),
+            value: self.current_token.t_literal.clone(),
+        };
+
+        identifiers.push(ident);
+
+        while self.peek_token_is(&TokenType::Comma) {
+            self.next_token();
+            self.next_token();
+
+            let ident = Identifier {
+                token: self.current_token.clone(),
+                value: self.current_token.t_literal.clone(),
+            };
+
+            identifiers.push(ident);
+        }
+
+        if !self.expect_peek(&TokenType::Rparen) {
+            return None;
+        }
+
+        Some(identifiers)
     }
 }
