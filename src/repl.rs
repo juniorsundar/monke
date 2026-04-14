@@ -17,9 +17,10 @@ pub fn start_repl() -> Result<()> {
                 let mut p = Parser::new(l);
                 let mut program = p.parse_program();
                 if !p.errors.is_empty() {
-                    println!("ERROR");
+                    print_parser_errors(&p);
+                } else {
+                    println!("{}", program.string());
                 }
-                println!("{}", program.string());
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
@@ -37,4 +38,10 @@ pub fn start_repl() -> Result<()> {
     }
     rl.save_history("history.txt")?;
     Ok(())
+}
+
+fn print_parser_errors(parser: &Parser) {
+    for msg in parser.errors.iter() {
+        eprintln!("\t {}", msg);
+    }
 }
