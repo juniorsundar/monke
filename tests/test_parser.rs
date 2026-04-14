@@ -6,7 +6,7 @@ use monke::{
     parser::Parser,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expected<'a> {
     Integer(i64),
     Identifier(&'a str),
@@ -147,94 +147,78 @@ fn check_parser_errors(parser: &Parser) {
 
 #[test]
 fn test_let_statements() {
-    let input = "
-    let x = 5;
-    let y = 10;
-    let foobar = 838383;
-    ";
+    let inputs = [
+        ("let x = 5;", "x", Expected::Integer(5)),
+        ("let y = true;", "y", Expected::Bool(true)),
+        ("let foobar = y;", "foobar", Expected::Identifier("y")),
+    ];
 
-    let lexer = Lexer::new(input.to_string());
-    let mut parser = Parser::new(lexer);
+    for input in inputs.iter() {
+        let lexer = Lexer::new(input.0.to_string());
+        let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
-    check_parser_errors(&parser);
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
 
-    assert_eq!(
-        program.statements.len(),
-        3,
-        "program.Statements does not contain 3 statements. got={}",
-        program.statements.len()
-    );
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "program.Statements does not contain 1 statement. got={}",
+            program.statements.len()
+        );
 
-    let expecteds = ["x", "y", "foobar"];
+        let Statement::Let(statement) = &program.statements[0] else {
+            panic!("Not LetStatement, got={:?}", program.statements[0]);
+        };
+        test_let_statement(&Statement::Let(statement.clone()), input.1);
 
-    for (expected, statement) in expecteds.iter().zip(program.statements.iter()) {
-        test_let_statement(statement, expected);
+        let Some(let_exp) = statement.value.as_deref() else {
+            panic!();
+        };
+
+        let expected = input.2.clone();
+        test_literal_expression(let_exp, expected);
     }
 }
 
-// #[test]
-// fn test_failed_let_statements() {
-//     let input = "
-//     let x 5;
-//     let = 10;
-//     let 838383;
-//     ";
-//
-//     let lexer = Lexer::new(input.to_string());
-//     let mut parser = Parser::new(lexer);
-//
-//     let program = parser.parse_program();
-//     check_parser_errors(&parser);
-//
-//     assert_eq!(
-//         program.statements.len(),
-//         3,
-//         "program.Statements does not contain 3 statements. got={}",
-//         program.statements.len()
-//     );
-//
-//     let expecteds = vec!["x", "y", "foobar"];
-//
-//     for (expected, statement) in expecteds.iter().zip(program.statements.iter()) {
-//         test_let_statement(statement, expected);
-//     }
-// }
-
 #[test]
 fn test_return_statements() {
-    let input = "
-    return 5;
-    return 10;
-    return 993322;
-    ";
+    let inputs = [
+        ("return 5;", Expected::Integer(5)),
+        ("return 10;", Expected::Integer(10)),
+        ("return 993322;", Expected::Integer(993322)),
+    ];
 
-    let lexer = Lexer::new(input.to_string());
-    let mut parser = Parser::new(lexer);
+    for input in inputs.iter() {
+        let lexer = Lexer::new(input.0.to_string());
+        let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
-    check_parser_errors(&parser);
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
 
-    assert_eq!(
-        program.statements.len(),
-        3,
-        "program.Statements does not contain 3 statements. got={}",
-        program.statements.len()
-    );
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "program.Statements does not contain 1 statements. got={}",
+            program.statements.len()
+        );
 
-    for statement in program.statements.iter() {
-        match statement {
-            Statement::Return(_) => {}
-            _ => {
-                panic!("Expected ReturnStatement, got: {:?}", statement);
-            }
-        }
+        let statement = program.statements[0].clone();
+        let Statement::Return(return_stmt) = &statement else {
+            panic!("Expected ReturnStatement, got: {:?}", statement);
+        };
         assert_eq!(
             statement.token_literal(),
             "return",
             "token_literal not 'return', got: {}",
             statement.token_literal()
         );
+
+        let Some(returned_exp) = &return_stmt.value.as_deref() else {
+            panic!("Should return Integer, got={:?}", return_stmt.value)
+        };
+
+        test_literal_expression(returned_exp, input.1.clone());
     }
 }
 

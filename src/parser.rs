@@ -155,35 +155,35 @@ impl Parser {
             return None;
         }
 
-        while !self.current_token_is(&TokenType::Semicolon) {
+        self.next_token();
+
+        let statement_value = self.parse_expression(Precedence::Lowest)?;
+
+        if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
 
         Some(Statement::Let(LetStatement {
             token: statement_token,
             name: statement_name,
-            value: Some(Box::new(Expression::Identifier(Identifier {
-                token: Token::default(),
-                value: "".to_string(),
-            }))),
+            value: Some(Box::new(statement_value)),
         }))
     }
 
     fn parse_return_statement(&mut self) -> Option<Statement> {
         let statement_token = self.current_token.clone();
-        let statement_value = Box::new(Expression::Identifier(Identifier {
-            token: Token::default(),
-            value: "".to_string(),
-        }));
-        let statement = Statement::Return(ReturnStatement {
-            token: statement_token,
-            value: Some(statement_value),
-        });
-
         self.next_token();
-        while !self.current_token_is(&TokenType::Semicolon) {
+
+        let statement_value = self.parse_expression(Precedence::Lowest)?;
+
+        if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
+
+        let statement = Statement::Return(ReturnStatement {
+            token: statement_token,
+            value: Some(Box::new(statement_value)),
+        });
 
         Some(statement)
     }
