@@ -1,10 +1,12 @@
 use std::fmt;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum ObjectType {
     Integer,
     Boolean,
     Null,
 }
+
 impl fmt::Display for ObjectType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -15,45 +17,27 @@ impl fmt::Display for ObjectType {
     }
 }
 
-pub trait Object {
-    fn object_type(&self) -> ObjectType {
-        ObjectType::Null
-    }
-    fn object_inspect(&self) -> String {
-        String::new()
-    }
+#[derive(Debug, Clone, PartialEq)]
+pub enum Object {
+    Integer(i64),
+    Boolean(bool),
+    Null,
 }
 
-pub struct Integer {
-    value: i64,
-}
-impl Object for Integer {
-    fn object_type(&self) -> ObjectType {
-        ObjectType::Integer
+impl Object {
+    pub fn object_type(&self) -> ObjectType {
+        match self {
+            Object::Integer(_) => ObjectType::Integer,
+            Object::Boolean(_) => ObjectType::Boolean,
+            Object::Null => ObjectType::Null,
+        }
     }
-    fn object_inspect(&self) -> String {
-        format!("{}", self.value)
-    }
-}
 
-pub struct Boolean {
-    value: bool,
-}
-impl Object for Boolean {
-    fn object_type(&self) -> ObjectType {
-        ObjectType::Boolean
-    }
-    fn object_inspect(&self) -> String {
-        format!("{}", self.value)
-    }
-}
-
-pub struct Null {}
-impl Object for Null {
-    fn object_type(&self) -> ObjectType {
-        ObjectType::Null
-    }
-    fn object_inspect(&self) -> String {
-        "NULL".to_string()
+    pub fn inspect(&self) -> String {
+        match self {
+            Object::Integer(val) => val.to_string(),
+            Object::Boolean(val) => val.to_string(),
+            Object::Null => "NULL".to_string(),
+        }
     }
 }
