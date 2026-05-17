@@ -29,6 +29,7 @@ fn eval_statement(statement: &Statement) -> Object {
 pub fn eval(expression: &Expression) -> Object {
     match expression {
         Expression::IntegerLiteral(node) => Object::Integer(node.value),
+        Expression::BooleanLiteral(node) => Object::Boolean(node.value),
         _ => Object::Null,
     }
 }

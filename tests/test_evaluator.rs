@@ -15,6 +15,35 @@ fn test_eval_integer_expression() {
     }
 }
 
+#[test]
+fn test_eval_boolean_expression() {
+    let tests = [("true", true), ("false", false)];
+
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+        test_boolean_object(evaluated, test_item.1);
+    }
+}
+
+fn test_boolean_object(evaluated: Object, test_item: bool) {
+    assert_eq!(
+        evaluated.object_type(),
+        ObjectType::Boolean,
+        "Evaluated object is not ObjectType::Boolean, got={:?}",
+        evaluated.object_type()
+    );
+
+    let Object::Boolean(eval_bool) = evaluated else {
+        panic!("Evaluated object was not bool");
+    };
+
+    assert_eq!(
+        eval_bool, test_item,
+        "Evaluated is {}, Provided was {}",
+        eval_bool, test_item
+    );
+}
+
 fn test_integer_object(evaluated: Object, test_item: i64) {
     assert_eq!(
         evaluated.object_type(),
