@@ -6,7 +6,7 @@ use monke::{
 };
 
 #[test]
-fn test_eval_integer_expression() {
+fn test_eval_integer_expressions() {
     let tests = [
         ("5", 5),
         ("10", 10),
@@ -32,7 +32,7 @@ fn test_eval_integer_expression() {
 }
 
 #[test]
-fn test_eval_boolean_expression() {
+fn test_eval_boolean_expressions() {
     let tests = [
         ("true", true),
         ("false", false),
@@ -76,6 +76,36 @@ fn test_bang_operator() {
         let evaluated = test_eval(test_item.0.to_string());
         test_boolean_object(evaluated, test_item.1);
     }
+}
+
+#[test]
+fn test_if_else_expressions() {
+    let tests = [
+        ("if (true) { 10 }", Some(10)),
+        ("if (false) { 10 }", None),
+        ("if (1) { 10 }", Some(10)),
+        ("if (1 < 2) { 10 }", Some(10)),
+        ("if (1 > 2) { 10 }", None),
+        ("if (1 > 2) { 10 } else { 20 }", Some(20)),
+        ("if (1 < 2) { 10 } else { 20 }", Some(10)),
+    ];
+
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+        match test_item.1 {
+            Some(val) => test_integer_object(evaluated, val),
+            None => test_null_object(evaluated),
+        }
+    }
+}
+
+fn test_null_object(evaluated: Object) {
+    assert_eq!(
+        evaluated.object_type(),
+        ObjectType::Null,
+        "Evaluated object is not ObjectType::Null, got={:?}",
+        evaluated.object_type()
+    );
 }
 
 fn test_boolean_object(evaluated: Object, test_item: bool) {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Program, Statement},
+    ast::{BlockStatement, Expression, Program, Statement},
     object::Object,
 };
 
@@ -22,8 +22,17 @@ fn eval_statement(statement: &Statement) -> Object {
                 Object::Null
             }
         }
+        Statement::Block(block_stmt) => eval_block_statement(block_stmt),
         _ => todo!(),
     }
+}
+
+fn eval_block_statement(block_stmt: &BlockStatement) -> Object {
+    let mut result = Object::Null;
+    for statement in &block_stmt.statements {
+        result = eval_statement(statement);
+    }
+    result
 }
 
 pub fn eval(expression: &Expression) -> Object {
@@ -48,7 +57,37 @@ pub fn eval(expression: &Expression) -> Object {
             };
             eval_infix_expression(&node.operator, left, right)
         }
+        Expression::If(node) => match (&node.condition, &node.consequence, &node.alternative) {
+            (Some(cond_expr), conseq, _) => {
+                eval_if_expression(cond_expr, conseq, node.alternative.as_ref())
+            }
+            (_, _, _) => Object::Null,
+        },
         _ => Object::Null,
+    }
+}
+
+fn eval_if_expression(
+    cond_expr: &Expression,
+    conseq: &BlockStatement,
+    alternative: Option<&BlockStatement>,
+) -> Object {
+    let condition = eval(cond_expr);
+    if is_truthy(condition) {
+        eval_block_statement(conseq)
+    } else if alternative.is_some() {
+        eval_block_statement(alternative.unwrap())
+    } else {
+        Object::Null
+    }
+}
+
+fn is_truthy(condition: Object) -> bool {
+    match condition {
+        Object::Null => false,
+        Object::Boolean(true) => true,
+        Object::Boolean(false) => false,
+        _ => true,
     }
 }
 
