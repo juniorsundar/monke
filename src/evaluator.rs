@@ -8,6 +8,9 @@ pub fn eval_program(program: &Program) -> Object {
 
     for statement in &program.statements {
         result = eval_statement(statement);
+        if let Object::Return(return_obj) = result {
+            return *return_obj;
+        }
     }
 
     result
@@ -23,6 +26,14 @@ fn eval_statement(statement: &Statement) -> Object {
             }
         }
         Statement::Block(block_stmt) => eval_block_statement(block_stmt),
+        Statement::Return(return_stmt) => {
+            if let Some(expr) = &return_stmt.value {
+                let return_obj = eval(expr);
+                Object::Return(Box::new(return_obj))
+            } else {
+                Object::Null
+            }
+        }
         _ => todo!(),
     }
 }

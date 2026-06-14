@@ -5,6 +5,7 @@ pub enum ObjectType {
     Integer,
     Boolean,
     Null,
+    Return,
 }
 
 impl fmt::Display for ObjectType {
@@ -13,6 +14,7 @@ impl fmt::Display for ObjectType {
             ObjectType::Integer => write!(f, "Integer"),
             ObjectType::Boolean => write!(f, "Boolean"),
             ObjectType::Null => write!(f, "Null"),
+            ObjectType::Return => write!(f, "Return"),
         }
     }
 }
@@ -22,6 +24,7 @@ pub enum Object {
     Integer(i64),
     Boolean(bool),
     Null,
+    Return(Box<Object>),
 }
 
 impl Object {
@@ -30,6 +33,7 @@ impl Object {
             Object::Integer(_) => ObjectType::Integer,
             Object::Boolean(_) => ObjectType::Boolean,
             Object::Null => ObjectType::Null,
+            Object::Return(_) => ObjectType::Return,
         }
     }
 
@@ -38,6 +42,7 @@ impl Object {
             Object::Integer(val) => val.to_string(),
             Object::Boolean(val) => val.to_string(),
             Object::Null => "NULL".to_string(),
+            Object::Return(val) => val.inspect(),
         }
     }
 }

@@ -99,6 +99,21 @@ fn test_if_else_expressions() {
     }
 }
 
+#[test]
+fn test_return_statements() {
+    let tests = [
+        ("return 10;", 10),
+        ("return 10; 9;", 10),
+        ("return 2 * 5; 9;", 10),
+        ("9; return 2 * 5; 9;", 10),
+    ];
+
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+        test_integer_object(evaluated, test_item.1);
+    }
+}
+
 fn test_null_object(evaluated: Object) {
     assert_eq!(
         evaluated.object_type(),
