@@ -7,7 +7,7 @@ use monke::{
 
 #[test]
 fn test_eval_integer_expression() {
-    let tests = [("5", 5), ("10", 10)];
+    let tests = [("5", 5), ("10", 10), ("-5", -5), ("-10", -10)];
 
     for test_item in tests {
         let evaluated = test_eval(test_item.0.to_string());
@@ -18,6 +18,23 @@ fn test_eval_integer_expression() {
 #[test]
 fn test_eval_boolean_expression() {
     let tests = [("true", true), ("false", false)];
+
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+        test_boolean_object(evaluated, test_item.1);
+    }
+}
+
+#[test]
+fn test_bang_operator() {
+    let tests = [
+        ("!true", false),
+        ("!false", true),
+        ("!5", false),
+        ("!!true", true),
+        ("!!false", false),
+        ("!!5", true),
+    ];
 
     for test_item in tests {
         let evaluated = test_eval(test_item.0.to_string());
