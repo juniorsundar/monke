@@ -37,6 +37,45 @@ pub fn eval(expression: &Expression) -> Object {
             };
             eval_prefix_expression(&node.operator, right)
         }
+        Expression::Infix(node) => {
+            let left = match node.left.as_deref() {
+                Some(expr) => eval(expr),
+                None => return Object::Null,
+            };
+            let right = match node.right.as_deref() {
+                Some(expr) => eval(expr),
+                None => return Object::Null,
+            };
+            eval_infix_expression(&node.operator, left, right)
+        }
+        _ => Object::Null,
+    }
+}
+
+fn eval_infix_expression(operator: &str, left: Object, right: Object) -> Object {
+    match (left, right) {
+        (Object::Integer(left_int), Object::Integer(right_int)) => {
+            eval_integer_infix_expression(operator, left_int, right_int)
+        }
+        (Object::Boolean(left_bool), Object::Boolean(right_bool)) => match operator {
+            "==" => Object::Boolean(left_bool == right_bool),
+            "!=" => Object::Boolean(left_bool != right_bool),
+            _ => Object::Null,
+        },
+        _ => Object::Null,
+    }
+}
+
+fn eval_integer_infix_expression(operator: &str, left_int: i64, right_int: i64) -> Object {
+    match operator {
+        "+" => Object::Integer(left_int + right_int),
+        "-" => Object::Integer(left_int - right_int),
+        "*" => Object::Integer(left_int * right_int),
+        "/" => Object::Integer(left_int / right_int),
+        "<" => Object::Boolean(left_int < right_int),
+        ">" => Object::Boolean(left_int > right_int),
+        "==" => Object::Boolean(left_int == right_int),
+        "!=" => Object::Boolean(left_int != right_int),
         _ => Object::Null,
     }
 }
