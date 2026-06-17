@@ -106,11 +106,55 @@ fn test_return_statements() {
         ("return 10; 9;", 10),
         ("return 2 * 5; 9;", 10),
         ("9; return 2 * 5; 9;", 10),
+        (
+            "if (10 > 1) {
+                if (10 > 1) {
+                    return 10;
+                }
+                return 1;
+            }",
+            10,
+        ),
     ];
 
     for test_item in tests {
         let evaluated = test_eval(test_item.0.to_string());
         test_integer_object(evaluated, test_item.1);
+    }
+}
+
+#[test]
+fn test_error_handling() {
+    let tests = [
+        ("5 + true;", "type mismatch: Integer + Boolean"),
+        ("5 + true; 5;", "type mismatch: Integer + Boolean"),
+        ("-true", "unknown operator: -Boolean"),
+        ("true + false;", "unknown operator: Boolean + Boolean"),
+        ("5; true + false; 5", "unknown operator: Boolean + Boolean"),
+        (
+            "if (10 > 1) { true + false; }",
+            "unknown operator: Boolean + Boolean",
+        ),
+        (
+            "if (10 > 1) {
+                if (10 > 1) {
+                    return true + false;
+                }
+                return 1;
+            }
+            ",
+            "unknown operator: Boolean + Boolean",
+        ),
+    ];
+
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+
+        if let Object::Error(message) = evaluated {
+            assert_eq!(test_item.1, message)
+        } else {
+            panic!("No error object returned, got={}", evaluated.object_type())
+        }
     }
 }
 

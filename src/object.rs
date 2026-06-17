@@ -6,6 +6,7 @@ pub enum ObjectType {
     Boolean,
     Null,
     Return,
+    Error,
 }
 
 impl fmt::Display for ObjectType {
@@ -15,6 +16,7 @@ impl fmt::Display for ObjectType {
             ObjectType::Boolean => write!(f, "Boolean"),
             ObjectType::Null => write!(f, "Null"),
             ObjectType::Return => write!(f, "Return"),
+            ObjectType::Error => write!(f, "Error"),
         }
     }
 }
@@ -25,6 +27,7 @@ pub enum Object {
     Boolean(bool),
     Null,
     Return(Box<Object>),
+    Error(String),
 }
 
 impl Object {
@@ -34,6 +37,7 @@ impl Object {
             Object::Boolean(_) => ObjectType::Boolean,
             Object::Null => ObjectType::Null,
             Object::Return(_) => ObjectType::Return,
+            Object::Error(_) => ObjectType::Error,
         }
     }
 
@@ -43,6 +47,7 @@ impl Object {
             Object::Boolean(val) => val.to_string(),
             Object::Null => "NULL".to_string(),
             Object::Return(val) => val.inspect(),
+            Object::Error(val) => format!("ERROR: {}", val),
         }
     }
 }

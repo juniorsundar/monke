@@ -1,6 +1,6 @@
 use crate::{
     ast::{BlockStatement, Expression, Program, Statement},
-    object::Object,
+    object::{Object, ObjectType},
 };
 
 pub fn eval_program(program: &Program) -> Object {
@@ -8,8 +8,11 @@ pub fn eval_program(program: &Program) -> Object {
 
     for statement in &program.statements {
         result = eval_statement(statement);
-        if let Object::Return(return_obj) = result {
-            return *return_obj;
+
+        match result {
+            Object::Return(return_obj) => return *return_obj,
+            Object::Error(_) => return result,
+            _ => continue,
         }
     }
 
@@ -42,6 +45,10 @@ fn eval_block_statement(block_stmt: &BlockStatement) -> Object {
     let mut result = Object::Null;
     for statement in &block_stmt.statements {
         result = eval_statement(statement);
+
+        if result.object_type() == ObjectType::Return || result.object_type() == ObjectType::Error {
+            return result;
+        }
     }
     result
 }
@@ -103,16 +110,36 @@ fn is_truthy(condition: Object) -> bool {
 }
 
 fn eval_infix_expression(operator: &str, left: Object, right: Object) -> Object {
-    match (left, right) {
+    match (&left, &right) {
         (Object::Integer(left_int), Object::Integer(right_int)) => {
-            eval_integer_infix_expression(operator, left_int, right_int)
+            eval_integer_infix_expression(operator, *left_int, *right_int)
         }
         (Object::Boolean(left_bool), Object::Boolean(right_bool)) => match operator {
             "==" => Object::Boolean(left_bool == right_bool),
             "!=" => Object::Boolean(left_bool != right_bool),
-            _ => Object::Null,
+            _ => new_error(format!(
+                "unknown operator: {} {} {}",
+                ObjectType::Boolean,
+                operator,
+                ObjectType::Boolean
+            )),
         },
-        _ => Object::Null,
+        _ => {
+            if left.object_type() != right.object_type() {
+                return new_error(format!(
+                    "type mismatch: {} {} {}",
+                    &left.object_type(),
+                    operator,
+                    &right.object_type()
+                ));
+            }
+            new_error(format!(
+                "unknown operator: {} {} {}",
+                &left.object_type(),
+                operator,
+                &right.object_type()
+            ))
+        }
     }
 }
 
@@ -126,7 +153,12 @@ fn eval_integer_infix_expression(operator: &str, left_int: i64, right_int: i64) 
         ">" => Object::Boolean(left_int > right_int),
         "==" => Object::Boolean(left_int == right_int),
         "!=" => Object::Boolean(left_int != right_int),
-        _ => Object::Null,
+        _ => new_error(format!(
+            "unknown operator: {} {} {}",
+            ObjectType::Integer,
+            operator,
+            ObjectType::Integer
+        )),
     }
 }
 
@@ -134,14 +166,18 @@ fn eval_prefix_expression(operator: &str, right: Object) -> Object {
     match operator {
         "!" => eval_bang_operator_expression(right),
         "-" => eval_minus_prefix_operator_expression(right),
-        _ => Object::Null,
+        _ => new_error(format!(
+            "unknown operator: {}{}",
+            operator,
+            right.object_type()
+        )),
     }
 }
 
 fn eval_minus_prefix_operator_expression(right: Object) -> Object {
     match right {
         Object::Integer(val) => Object::Integer(-val),
-        _ => Object::Null,
+        _ => new_error(format!("unknown operator: -{}", right.object_type())),
     }
 }
 
@@ -152,4 +188,8 @@ fn eval_bang_operator_expression(right: Object) -> Object {
         Object::Null => Object::Boolean(true),
         _ => Object::Boolean(false),
     }
+}
+
+fn new_error(message: String) -> Object {
+    Object::Error(message)
 }
