@@ -32,6 +32,9 @@ fn eval_statement(statement: &Statement) -> Object {
         Statement::Return(return_stmt) => {
             if let Some(expr) = &return_stmt.value {
                 let return_obj = eval(expr);
+                if is_error(&return_obj) {
+                    return return_obj;
+                };
                 Object::Return(Box::new(return_obj))
             } else {
                 Object::Null
@@ -62,6 +65,9 @@ pub fn eval(expression: &Expression) -> Object {
                 Some(expr) => eval(expr),
                 None => return Object::Null,
             };
+            if is_error(&right) {
+                return right;
+            }
             eval_prefix_expression(&node.operator, right)
         }
         Expression::Infix(node) => {
@@ -69,10 +75,16 @@ pub fn eval(expression: &Expression) -> Object {
                 Some(expr) => eval(expr),
                 None => return Object::Null,
             };
+            if is_error(&left) {
+                return left;
+            }
             let right = match node.right.as_deref() {
                 Some(expr) => eval(expr),
                 None => return Object::Null,
             };
+            if is_error(&right) {
+                return right;
+            }
             eval_infix_expression(&node.operator, left, right)
         }
         Expression::If(node) => match (&node.condition, &node.consequence, &node.alternative) {
@@ -91,6 +103,9 @@ fn eval_if_expression(
     alternative: Option<&BlockStatement>,
 ) -> Object {
     let condition = eval(cond_expr);
+    if is_error(&condition) {
+        return condition;
+    }
     if is_truthy(condition) {
         eval_block_statement(conseq)
     } else if alternative.is_some() {
@@ -192,4 +207,8 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 
 fn new_error(message: String) -> Object {
     Object::Error(message)
+}
+
+fn is_error(object: &Object) -> bool {
+    object.object_type() == ObjectType::Error
 }
