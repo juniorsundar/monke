@@ -1,4 +1,5 @@
 use monke::{
+    environment::Environment,
     evaluator::eval_program,
     lexer::Lexer,
     object::{Object, ObjectType},
@@ -145,6 +146,7 @@ fn test_error_handling() {
             ",
             "unknown operator: Boolean + Boolean",
         ),
+        ("foobar", "identifier not found: foobar"),
     ];
 
     for test_item in tests {
@@ -155,6 +157,20 @@ fn test_error_handling() {
         } else {
             panic!("No error object returned, got={}", evaluated.object_type())
         }
+    }
+}
+
+#[test]
+fn test_let_statements() {
+    let tests = [
+        ("let a = 5; a;", 5),
+        ("let a = 5 * 5; a;", 25),
+        ("let a = 5; let b = a; b;", 5),
+        ("let a = 5; let b = a; let c = a + b + 5; c;", 15),
+    ];
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+        test_integer_object(evaluated, test_item.1);
     }
 }
 
@@ -209,6 +225,7 @@ fn test_eval(input: String) -> Object {
     let l = Lexer::new(input);
     let mut p = Parser::new(l);
     let program = p.parse_program();
+    let mut environment = Environment::new();
 
-    eval_program(&program)
+    eval_program(&program, &mut environment)
 }

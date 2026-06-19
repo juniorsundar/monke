@@ -1,13 +1,14 @@
 use crate::{
-    ast::{BlockStatement, Expression, Program, Statement},
+    ast::{BlockStatement, Expression, Identifier, Program, Statement},
+    environment::Environment,
     object::{Object, ObjectType},
 };
 
-pub fn eval_program(program: &Program) -> Object {
+pub fn eval_program(program: &Program, environment: &mut Environment) -> Object {
     let mut result = Object::Null;
 
     for statement in &program.statements {
-        result = eval_statement(statement);
+        result = eval_statement(statement, environment);
 
         match result {
             Object::Return(return_obj) => return *return_obj,
@@ -19,19 +20,19 @@ pub fn eval_program(program: &Program) -> Object {
     result
 }
 
-fn eval_statement(statement: &Statement) -> Object {
+fn eval_statement(statement: &Statement, environment: &mut Environment) -> Object {
     match statement {
         Statement::Expression(expr_stmt) => {
             if let Some(expr) = &expr_stmt.value {
-                eval(expr)
+                eval(expr, environment)
             } else {
                 Object::Null
             }
         }
-        Statement::Block(block_stmt) => eval_block_statement(block_stmt),
+        Statement::Block(block_stmt) => eval_block_statement(block_stmt, environment),
         Statement::Return(return_stmt) => {
             if let Some(expr) = &return_stmt.value {
-                let return_obj = eval(expr);
+                let return_obj = eval(expr, environment);
                 if is_error(&return_obj) {
                     return return_obj;
                 };
@@ -40,14 +41,24 @@ fn eval_statement(statement: &Statement) -> Object {
                 Object::Null
             }
         }
-        _ => todo!(),
+        Statement::Let(let_stmt) => {
+            if let Some(expr) = &let_stmt.value {
+                let let_obj = eval(expr, environment);
+                if is_error(&let_obj) {
+                    return let_obj;
+                };
+                environment.set(let_stmt.name.value.clone(), let_obj)
+            } else {
+                Object::Null
+            }
+        }
     }
 }
 
-fn eval_block_statement(block_stmt: &BlockStatement) -> Object {
+fn eval_block_statement(block_stmt: &BlockStatement, environment: &mut Environment) -> Object {
     let mut result = Object::Null;
     for statement in &block_stmt.statements {
-        result = eval_statement(statement);
+        result = eval_statement(statement, environment);
 
         if result.object_type() == ObjectType::Return || result.object_type() == ObjectType::Error {
             return result;
@@ -56,13 +67,13 @@ fn eval_block_statement(block_stmt: &BlockStatement) -> Object {
     result
 }
 
-pub fn eval(expression: &Expression) -> Object {
+pub fn eval(expression: &Expression, environment: &mut Environment) -> Object {
     match expression {
         Expression::IntegerLiteral(node) => Object::Integer(node.value),
         Expression::BooleanLiteral(node) => Object::Boolean(node.value),
         Expression::Prefix(node) => {
             let right = match node.right.as_deref() {
-                Some(expr) => eval(expr),
+                Some(expr) => eval(expr, environment),
                 None => return Object::Null,
             };
             if is_error(&right) {
@@ -72,14 +83,14 @@ pub fn eval(expression: &Expression) -> Object {
         }
         Expression::Infix(node) => {
             let left = match node.left.as_deref() {
-                Some(expr) => eval(expr),
+                Some(expr) => eval(expr, environment),
                 None => return Object::Null,
             };
             if is_error(&left) {
                 return left;
             }
             let right = match node.right.as_deref() {
-                Some(expr) => eval(expr),
+                Some(expr) => eval(expr, environment),
                 None => return Object::Null,
             };
             if is_error(&right) {
@@ -89,11 +100,19 @@ pub fn eval(expression: &Expression) -> Object {
         }
         Expression::If(node) => match (&node.condition, &node.consequence, &node.alternative) {
             (Some(cond_expr), conseq, _) => {
-                eval_if_expression(cond_expr, conseq, node.alternative.as_ref())
+                eval_if_expression(cond_expr, conseq, node.alternative.as_ref(), environment)
             }
             (_, _, _) => Object::Null,
         },
+        Expression::Identifier(node) => eval_identifier(node, environment),
         _ => Object::Null,
+    }
+}
+
+fn eval_identifier(identifier: &Identifier, environment: &mut Environment) -> Object {
+    match environment.get(&identifier.value) {
+        Some(val) => val.clone(),
+        None => new_error(format!("identifier not found: {}", identifier.value)),
     }
 }
 
@@ -101,15 +120,16 @@ fn eval_if_expression(
     cond_expr: &Expression,
     conseq: &BlockStatement,
     alternative: Option<&BlockStatement>,
+    environment: &mut Environment,
 ) -> Object {
-    let condition = eval(cond_expr);
+    let condition = eval(cond_expr, environment);
     if is_error(&condition) {
         return condition;
     }
     if is_truthy(condition) {
-        eval_block_statement(conseq)
+        eval_block_statement(conseq, environment)
     } else if alternative.is_some() {
-        eval_block_statement(alternative.unwrap())
+        eval_block_statement(alternative.unwrap(), environment)
     } else {
         Object::Null
     }
