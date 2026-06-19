@@ -1,5 +1,10 @@
 use std::fmt;
 
+use crate::{
+    ast::{BlockStatement, Identifier},
+    environment::Environment,
+};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ObjectType {
     Integer,
@@ -7,6 +12,7 @@ pub enum ObjectType {
     Null,
     Return,
     Error,
+    Function,
 }
 
 impl fmt::Display for ObjectType {
@@ -17,7 +23,20 @@ impl fmt::Display for ObjectType {
             ObjectType::Null => write!(f, "Null"),
             ObjectType::Return => write!(f, "Return"),
             ObjectType::Error => write!(f, "Error"),
+            ObjectType::Function => write!(f, "Function"),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub parameters: Vec<Identifier>,
+    pub body: BlockStatement,
+    pub environment: Environment,
+}
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        self.parameters == other.parameters && self.body == other.body
     }
 }
 
@@ -28,6 +47,7 @@ pub enum Object {
     Null,
     Return(Box<Object>),
     Error(String),
+    Function(Function),
 }
 
 impl Object {
@@ -38,6 +58,7 @@ impl Object {
             Object::Null => ObjectType::Null,
             Object::Return(_) => ObjectType::Return,
             Object::Error(_) => ObjectType::Error,
+            Object::Function(_) => ObjectType::Function,
         }
     }
 
@@ -48,6 +69,22 @@ impl Object {
             Object::Null => "NULL".to_string(),
             Object::Return(val) => val.inspect(),
             Object::Error(val) => format!("ERROR: {}", val),
+            Object::Function(val) => {
+                let mut out = String::new();
+                let mut params: Vec<String> = Vec::new();
+                for param in &val.parameters {
+                    params.push(param.string());
+                }
+
+                out.push_str("fn");
+                out.push_str("(");
+                out.push_str(&params.join(", "));
+                out.push_str(") {\n");
+                out.push_str(&val.body.string());
+                out.push_str("\n}");
+
+                out
+            }
         }
     }
 }

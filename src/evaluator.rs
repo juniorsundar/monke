@@ -1,7 +1,7 @@
 use crate::{
     ast::{BlockStatement, Expression, Identifier, Program, Statement},
     environment::Environment,
-    object::{Object, ObjectType},
+    object::{Function, Object, ObjectType},
 };
 
 pub fn eval_program(program: &Program, environment: &mut Environment) -> Object {
@@ -105,6 +105,15 @@ pub fn eval(expression: &Expression, environment: &mut Environment) -> Object {
             (_, _, _) => Object::Null,
         },
         Expression::Identifier(node) => eval_identifier(node, environment),
+        Expression::FunctionLiteral(node) => {
+            Object::Function(Function {
+                parameters: node.parameters.clone(),
+                body: node.body.clone(),
+                environment: environment.to_owned(), // IMPORTANT: This creates snapshot
+                                                     // behaviour!!! May have to check
+                                                     // Rc<RefCell<Environment>> to avoid this behaviour
+            })
+        }
         _ => Object::Null,
     }
 }

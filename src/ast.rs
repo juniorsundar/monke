@@ -1,29 +1,39 @@
 #![allow(clippy::single_char_add_str)]
 use crate::token::Token;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LetStatement {
     pub token: Token,
     pub name: Identifier,
     pub value: Option<Box<Expression>>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ReturnStatement {
     pub token: Token,
     pub value: Option<Box<Expression>>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionStatement {
     pub token: Token,
     pub value: Option<Box<Expression>>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockStatement {
     pub token: Token,
     pub statements: Vec<Statement>,
 }
+impl BlockStatement {
+    pub fn string(&self) -> String {
+        let mut out = String::new();
 
-#[derive(Debug, Clone)]
+        for s in self.statements.iter() {
+            out.push_str(&s.string());
+        }
+        out
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
@@ -72,19 +82,12 @@ impl Statement {
                 }
                 "".to_string()
             }
-            Statement::Block(t) => {
-                let mut out = String::new();
-
-                for s in t.statements.iter() {
-                    out.push_str(&s.string());
-                }
-                out
-            }
+            Statement::Block(t) => t.string(),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
@@ -94,7 +97,7 @@ impl Identifier {
         self.value.clone()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IntegerLiteral {
     pub token: Token,
     pub value: i64,
@@ -104,7 +107,7 @@ impl IntegerLiteral {
         self.token.t_literal.clone()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Prefix {
     pub token: Token,
     pub operator: String,
@@ -119,7 +122,7 @@ impl Prefix {
         out
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Infix {
     pub token: Token,
     pub left: Option<Box<Expression>>,
@@ -136,7 +139,7 @@ impl Infix {
         out
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BooleanLiteral {
     pub token: Token,
     pub value: bool,
@@ -146,7 +149,7 @@ impl BooleanLiteral {
         self.token.t_literal.clone()
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct If {
     pub token: Token,
     pub condition: Option<Box<Expression>>,
@@ -170,7 +173,7 @@ impl If {
         out
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionLiteral {
     pub token: Token,
     pub parameters: Vec<Identifier>, // Has to be Identifier
@@ -194,7 +197,7 @@ impl FunctionLiteral {
         out
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Call {
     pub token: Token,
     pub function: Box<Expression>, // Identifer or FunctionLiteral
@@ -217,7 +220,7 @@ impl Call {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),

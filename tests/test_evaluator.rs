@@ -174,6 +174,33 @@ fn test_let_statements() {
     }
 }
 
+#[test]
+fn test_function_object() {
+    let input = String::from("fn(x) { x + 2; };");
+    let evaluated = test_eval(input);
+
+    match evaluated {
+        Object::Function(func) => {
+            assert_eq!(
+                func.parameters.len(),
+                1,
+                "function has wrong number of parameters. Parameters={:?}",
+                func.parameters
+            );
+
+            assert_eq!(
+                func.parameters[0].string(),
+                "x",
+                "parameter is not 'x'. got={:?}",
+                func.parameters[0]
+            );
+
+            assert_eq!(func.body.string(), "(x + 2)")
+        }
+        _ => panic!("Object is not Function. got={}", evaluated.object_type()),
+    }
+}
+
 fn test_null_object(evaluated: Object) {
     assert_eq!(
         evaluated.object_type(),
