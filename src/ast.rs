@@ -1,4 +1,3 @@
-#![allow(clippy::single_char_add_str)]
 use crate::token::Token;
 
 #[derive(Debug, Clone, PartialEq)]

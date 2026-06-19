@@ -201,6 +201,33 @@ fn test_function_object() {
     }
 }
 
+#[test]
+fn test_function_application() {
+    let tests = [
+        ("let identity = fn(x) { x; }; identity(5);", 5),
+        ("let identity = fn(x) { return x; }; identity(5);", 5),
+        ("let double = fn(x) { x * 2; }; double(5);", 10),
+        ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+        ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+        ("fn(x) { x; }(5)", 5),
+    ];
+
+    for test_item in tests {
+        test_integer_object(test_eval(test_item.0.to_string()), test_item.1);
+    }
+}
+
+#[test]
+fn test_closures() {
+    let input = "
+        let newAdder = fn(x) {
+            fn(y) { x + y };
+        };
+    let addTwo = newAdder(2);
+    addTwo(2);";
+    test_integer_object(test_eval(input.to_string()), 4)
+}
+
 fn test_null_object(evaluated: Object) {
     assert_eq!(
         evaluated.object_type(),

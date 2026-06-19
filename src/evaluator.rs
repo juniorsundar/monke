@@ -114,8 +114,57 @@ pub fn eval(expression: &Expression, environment: &mut Environment) -> Object {
                                                      // Rc<RefCell<Environment>> to avoid this behaviour
             })
         }
-        _ => Object::Null,
+        Expression::Call(node) => {
+            let function = eval(&node.function, environment);
+            if is_error(&function) {
+                return function;
+            }
+
+            let args = eval_expression(&node.arguments, environment);
+            if args.len() == 1 && is_error(&args[0]) {
+                return args[0].clone();
+            }
+
+            apply_function(&function, &args)
+        }
     }
+}
+
+fn apply_function(function: &Object, args: &[Object]) -> Object {
+    if let Object::Function(func) = function {
+        let mut extended_environment = extend_function_env(func, args);
+        let evaluated = eval_block_statement(&func.body, &mut extended_environment);
+        unwrap_return_value(evaluated)
+    } else {
+        new_error(format!("not a function: {}", function.object_type()))
+    }
+}
+
+fn unwrap_return_value(evaluated: Object) -> Object {
+    if let Object::Return(value) = evaluated {
+        return *value;
+    }
+    evaluated
+}
+
+fn extend_function_env(function: &Function, args: &[Object]) -> Environment {
+    let mut environment = Environment::new_enclosed(function.environment.clone());
+    for (idx, param) in function.parameters.iter().enumerate() {
+        environment.set(param.value.clone(), args[idx].clone());
+    }
+    environment
+}
+
+fn eval_expression(arguments: &[Expression], environment: &mut Environment) -> Vec<Object> {
+    let mut result: Vec<Object> = Vec::new();
+    for exp in arguments {
+        let evaluated = eval(exp, environment);
+        if is_error(&evaluated) {
+            return [evaluated].to_vec();
+        }
+        result.push(evaluated);
+    }
+    result
 }
 
 fn eval_identifier(identifier: &Identifier, environment: &mut Environment) -> Object {
