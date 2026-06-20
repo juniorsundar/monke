@@ -228,6 +228,21 @@ fn test_closures() {
     test_integer_object(test_eval(input.to_string()), 4)
 }
 
+#[test]
+fn test_recursion() {
+    let input = "
+    let counter = fn(x) {
+        if (x > 100) {
+            return true;
+        } else {
+            let foobar = 9999;
+            counter(x + 1);
+        }
+    };
+    counter(0);";
+    test_boolean_object(test_eval(input.to_string()), true)
+}
+
 fn test_null_object(evaluated: Object) {
     assert_eq!(
         evaluated.object_type(),
