@@ -1,8 +1,5 @@
-use std::{cell::RefCell, rc::Rc};
-
 use monke::{
-    environment::Environment,
-    evaluator::eval_program,
+    evaluator::{Runtime, eval_program},
     lexer::Lexer,
     object::{Object, ObjectType},
     parser::Parser,
@@ -296,7 +293,8 @@ fn test_eval(input: String) -> Object {
     let l = Lexer::new(input);
     let mut p = Parser::new(l);
     let program = p.parse_program();
-    let environment = Rc::new(RefCell::new(Environment::new()));
+    let mut runtime = Runtime::new();
+    let env_id = runtime.new_environment();
 
-    eval_program(&program, &environment)
+    eval_program(&program, &mut runtime, env_id)
 }

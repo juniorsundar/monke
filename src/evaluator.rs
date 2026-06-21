@@ -1,16 +1,60 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
     ast::{BlockStatement, Expression, Identifier, Program, Statement},
-    environment::Environment,
+    environment::{EnvId, Environment},
     object::{Function, Object, ObjectType},
 };
 
-pub fn eval_program(program: &Program, environment: &Rc<RefCell<Environment>>) -> Object {
+pub struct Runtime {
+    environments: Vec<Environment>,
+}
+impl Runtime {
+    pub fn new() -> Self {
+        Runtime {
+            environments: Vec::<Environment>::new(),
+        }
+    }
+
+    pub fn new_environment(&mut self) -> EnvId {
+        self.environments.push(Environment::new());
+        self.environments.len() - 1
+    }
+
+    fn new_enclosed_environment(&mut self, outer: EnvId) -> EnvId {
+        let new_enc = Environment::new_enclosed(outer);
+        self.environments.push(new_enc);
+        self.environments.len() - 1
+    }
+
+    fn get(&self, env_id: EnvId, name: &str) -> Option<Object> {
+        if env_id >= self.environments.len() {
+            return None;
+        }
+        let mut current = Some(env_id);
+        while let Some(id) = current {
+            if let Some(obj) = self.environments[id].get(name) {
+                return Some(obj);
+            } else {
+                current = self.environments[id].get_outer()
+            }
+        }
+        None
+    }
+
+    fn set(&mut self, env_id: EnvId, name: String, val: Object) -> Object {
+        self.environments[env_id].set(name, val)
+    }
+}
+impl Default for Runtime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub fn eval_program(program: &Program, runtime: &mut Runtime, env_id: EnvId) -> Object {
     let mut result = Object::Null;
 
     for statement in &program.statements {
-        result = eval_statement(statement, environment);
+        result = eval_statement(statement, runtime, env_id);
 
         match result {
             Object::Return(return_obj) => return *return_obj,
@@ -22,19 +66,19 @@ pub fn eval_program(program: &Program, environment: &Rc<RefCell<Environment>>) -
     result
 }
 
-fn eval_statement(statement: &Statement, environment: &Rc<RefCell<Environment>>) -> Object {
+fn eval_statement(statement: &Statement, runtime: &mut Runtime, env_id: EnvId) -> Object {
     match statement {
         Statement::Expression(expr_stmt) => {
             if let Some(expr) = &expr_stmt.value {
-                eval(expr, environment)
+                eval(expr, runtime, env_id)
             } else {
                 Object::Null
             }
         }
-        Statement::Block(block_stmt) => eval_block_statement(block_stmt, environment),
+        Statement::Block(block_stmt) => eval_block_statement(block_stmt, runtime, env_id),
         Statement::Return(return_stmt) => {
             if let Some(expr) = &return_stmt.value {
-                let return_obj = eval(expr, environment);
+                let return_obj = eval(expr, runtime, env_id);
                 if is_error(&return_obj) {
                     return return_obj;
                 };
@@ -45,13 +89,11 @@ fn eval_statement(statement: &Statement, environment: &Rc<RefCell<Environment>>)
         }
         Statement::Let(let_stmt) => {
             if let Some(expr) = &let_stmt.value {
-                let let_obj = eval(expr, environment);
+                let let_obj = eval(expr, runtime, env_id);
                 if is_error(&let_obj) {
                     return let_obj;
                 };
-                environment
-                    .borrow_mut()
-                    .set(let_stmt.name.value.clone(), let_obj)
+                runtime.set(env_id, let_stmt.name.value.clone(), let_obj)
             } else {
                 Object::Null
             }
@@ -61,11 +103,12 @@ fn eval_statement(statement: &Statement, environment: &Rc<RefCell<Environment>>)
 
 fn eval_block_statement(
     block_stmt: &BlockStatement,
-    environment: &Rc<RefCell<Environment>>,
+    runtime: &mut Runtime,
+    env_id: EnvId,
 ) -> Object {
     let mut result = Object::Null;
     for statement in &block_stmt.statements {
-        result = eval_statement(statement, environment);
+        result = eval_statement(statement, runtime, env_id);
 
         if result.object_type() == ObjectType::Return || result.object_type() == ObjectType::Error {
             return result;
@@ -74,13 +117,13 @@ fn eval_block_statement(
     result
 }
 
-pub fn eval(expression: &Expression, environment: &Rc<RefCell<Environment>>) -> Object {
+pub fn eval(expression: &Expression, runtime: &mut Runtime, env_id: EnvId) -> Object {
     match expression {
         Expression::IntegerLiteral(node) => Object::Integer(node.value),
         Expression::BooleanLiteral(node) => Object::Boolean(node.value),
         Expression::Prefix(node) => {
             let right = match node.right.as_deref() {
-                Some(expr) => eval(expr, environment),
+                Some(expr) => eval(expr, runtime, env_id),
                 None => return Object::Null,
             };
             if is_error(&right) {
@@ -90,14 +133,14 @@ pub fn eval(expression: &Expression, environment: &Rc<RefCell<Environment>>) -> 
         }
         Expression::Infix(node) => {
             let left = match node.left.as_deref() {
-                Some(expr) => eval(expr, environment),
+                Some(expr) => eval(expr, runtime, env_id),
                 None => return Object::Null,
             };
             if is_error(&left) {
                 return left;
             }
             let right = match node.right.as_deref() {
-                Some(expr) => eval(expr, environment),
+                Some(expr) => eval(expr, runtime, env_id),
                 None => return Object::Null,
             };
             if is_error(&right) {
@@ -106,37 +149,41 @@ pub fn eval(expression: &Expression, environment: &Rc<RefCell<Environment>>) -> 
             eval_infix_expression(&node.operator, left, right)
         }
         Expression::If(node) => match (&node.condition, &node.consequence, &node.alternative) {
-            (Some(cond_expr), conseq, _) => {
-                eval_if_expression(cond_expr, conseq, node.alternative.as_ref(), environment)
-            }
+            (Some(cond_expr), conseq, _) => eval_if_expression(
+                cond_expr,
+                conseq,
+                node.alternative.as_ref(),
+                runtime,
+                env_id,
+            ),
             (_, _, _) => Object::Null,
         },
-        Expression::Identifier(node) => eval_identifier(node, environment),
+        Expression::Identifier(node) => eval_identifier(node, runtime, env_id),
         Expression::FunctionLiteral(node) => Object::Function(Function {
             parameters: node.parameters.clone(),
             body: node.body.clone(),
-            environment: environment.to_owned(),
+            environment: env_id,
         }),
         Expression::Call(node) => {
-            let function = eval(&node.function, environment);
+            let function = eval(&node.function, runtime, env_id);
             if is_error(&function) {
                 return function;
             }
 
-            let args = eval_expression(&node.arguments, environment);
+            let args = eval_expression(&node.arguments, runtime, env_id);
             if args.len() == 1 && is_error(&args[0]) {
                 return args[0].clone();
             }
 
-            apply_function(&function, &args)
+            apply_function(&function, &args, runtime)
         }
     }
 }
 
-fn apply_function(function: &Object, args: &[Object]) -> Object {
+fn apply_function(function: &Object, args: &[Object], runtime: &mut Runtime) -> Object {
     if let Object::Function(func) = function {
-        let extended_environment = extend_function_env(func, args);
-        let evaluated = eval_block_statement(&func.body, &extended_environment);
+        let extended_environment = extend_function_env(func, args, runtime);
+        let evaluated = eval_block_statement(&func.body, runtime, extended_environment);
         unwrap_return_value(evaluated)
     } else {
         new_error(format!("not a function: {}", function.object_type()))
@@ -150,21 +197,18 @@ fn unwrap_return_value(evaluated: Object) -> Object {
     evaluated
 }
 
-fn extend_function_env(function: &Function, args: &[Object]) -> Rc<RefCell<Environment>> {
-    let mut environment = Environment::new_enclosed(function.environment.clone());
+fn extend_function_env(function: &Function, args: &[Object], runtime: &mut Runtime) -> EnvId {
+    let new_env = runtime.new_enclosed_environment(function.environment);
     for (idx, param) in function.parameters.iter().enumerate() {
-        environment.set(param.value.clone(), args[idx].clone());
+        runtime.set(new_env, param.value.clone(), args[idx].clone());
     }
-    Rc::new(RefCell::new(environment))
+    new_env
 }
 
-fn eval_expression(
-    arguments: &[Expression],
-    environment: &Rc<RefCell<Environment>>,
-) -> Vec<Object> {
+fn eval_expression(arguments: &[Expression], runtime: &mut Runtime, env_id: EnvId) -> Vec<Object> {
     let mut result: Vec<Object> = Vec::new();
     for exp in arguments {
-        let evaluated = eval(exp, environment);
+        let evaluated = eval(exp, runtime, env_id);
         if is_error(&evaluated) {
             return [evaluated].to_vec();
         }
@@ -173,9 +217,9 @@ fn eval_expression(
     result
 }
 
-fn eval_identifier(identifier: &Identifier, environment: &Rc<RefCell<Environment>>) -> Object {
-    match environment.borrow().get(&identifier.value) {
-        Some(val) => val.clone(),
+fn eval_identifier(identifier: &Identifier, runtime: &mut Runtime, env_id: EnvId) -> Object {
+    match runtime.get(env_id, &identifier.value) {
+        Some(val) => val,
         None => new_error(format!("identifier not found: {}", identifier.value)),
     }
 }
@@ -184,16 +228,17 @@ fn eval_if_expression(
     cond_expr: &Expression,
     conseq: &BlockStatement,
     alternative: Option<&BlockStatement>,
-    environment: &Rc<RefCell<Environment>>,
+    runtime: &mut Runtime,
+    env_id: EnvId,
 ) -> Object {
-    let condition = eval(cond_expr, environment);
+    let condition = eval(cond_expr, runtime, env_id);
     if is_error(&condition) {
         return condition;
     }
     if is_truthy(condition) {
-        eval_block_statement(conseq, environment)
+        eval_block_statement(conseq, runtime, env_id)
     } else if alternative.is_some() {
-        eval_block_statement(alternative.unwrap(), environment)
+        eval_block_statement(alternative.unwrap(), runtime, env_id)
     } else {
         Object::Null
     }

@@ -1,13 +1,16 @@
-use std::{cell::RefCell, rc::Rc};
-
 use rustyline::{DefaultEditor, Result, error::ReadlineError};
 
-use crate::{environment::Environment, evaluator::eval_program, lexer::Lexer, parser::Parser};
+use crate::{
+    evaluator::{Runtime, eval_program},
+    lexer::Lexer,
+    parser::Parser,
+};
 
 pub fn start_repl() -> Result<()> {
     println!("Monke smart! Make read, Monke do!");
     let mut rl = DefaultEditor::new()?;
-    let environment = Rc::new(RefCell::new(Environment::new()));
+    let mut runtime = Runtime::new();
+    let env_id = runtime.new_environment();
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
@@ -22,7 +25,7 @@ pub fn start_repl() -> Result<()> {
                 if !p.errors.is_empty() {
                     print_parser_errors(&p);
                 } else {
-                    let evaluated = eval_program(&program, &environment);
+                    let evaluated = eval_program(&program, &mut runtime, env_id);
                     println!("{}", evaluated.inspect());
                 }
             }
