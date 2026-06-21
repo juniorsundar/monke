@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use monke::{
     environment::Environment,
     evaluator::eval_program,
@@ -294,7 +296,7 @@ fn test_eval(input: String) -> Object {
     let l = Lexer::new(input);
     let mut p = Parser::new(l);
     let program = p.parse_program();
-    let mut environment = Environment::new();
+    let environment = Rc::new(RefCell::new(Environment::new()));
 
-    eval_program(&program, &mut environment)
+    eval_program(&program, &environment)
 }

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{cell::RefCell, fmt, rc::Rc};
 
 use crate::{
     ast::{BlockStatement, Identifier},
@@ -32,7 +32,7 @@ impl fmt::Display for ObjectType {
 pub struct Function {
     pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
-    pub environment: Environment,
+    pub environment: Rc<RefCell<Environment>>,
 }
 impl PartialEq for Function {
     fn eq(&self, other: &Self) -> bool {

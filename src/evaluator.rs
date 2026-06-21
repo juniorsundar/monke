@@ -1,10 +1,12 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     ast::{BlockStatement, Expression, Identifier, Program, Statement},
     environment::Environment,
     object::{Function, Object, ObjectType},
 };
 
-pub fn eval_program(program: &Program, environment: &mut Environment) -> Object {
+pub fn eval_program(program: &Program, environment: &Rc<RefCell<Environment>>) -> Object {
     let mut result = Object::Null;
 
     for statement in &program.statements {
@@ -20,7 +22,7 @@ pub fn eval_program(program: &Program, environment: &mut Environment) -> Object 
     result
 }
 
-fn eval_statement(statement: &Statement, environment: &mut Environment) -> Object {
+fn eval_statement(statement: &Statement, environment: &Rc<RefCell<Environment>>) -> Object {
     match statement {
         Statement::Expression(expr_stmt) => {
             if let Some(expr) = &expr_stmt.value {
@@ -47,7 +49,9 @@ fn eval_statement(statement: &Statement, environment: &mut Environment) -> Objec
                 if is_error(&let_obj) {
                     return let_obj;
                 };
-                environment.set(let_stmt.name.value.clone(), let_obj)
+                environment
+                    .borrow_mut()
+                    .set(let_stmt.name.value.clone(), let_obj)
             } else {
                 Object::Null
             }
@@ -55,7 +59,10 @@ fn eval_statement(statement: &Statement, environment: &mut Environment) -> Objec
     }
 }
 
-fn eval_block_statement(block_stmt: &BlockStatement, environment: &mut Environment) -> Object {
+fn eval_block_statement(
+    block_stmt: &BlockStatement,
+    environment: &Rc<RefCell<Environment>>,
+) -> Object {
     let mut result = Object::Null;
     for statement in &block_stmt.statements {
         result = eval_statement(statement, environment);
@@ -67,7 +74,7 @@ fn eval_block_statement(block_stmt: &BlockStatement, environment: &mut Environme
     result
 }
 
-pub fn eval(expression: &Expression, environment: &mut Environment) -> Object {
+pub fn eval(expression: &Expression, environment: &Rc<RefCell<Environment>>) -> Object {
     match expression {
         Expression::IntegerLiteral(node) => Object::Integer(node.value),
         Expression::BooleanLiteral(node) => Object::Boolean(node.value),
@@ -105,15 +112,11 @@ pub fn eval(expression: &Expression, environment: &mut Environment) -> Object {
             (_, _, _) => Object::Null,
         },
         Expression::Identifier(node) => eval_identifier(node, environment),
-        Expression::FunctionLiteral(node) => {
-            Object::Function(Function {
-                parameters: node.parameters.clone(),
-                body: node.body.clone(),
-                environment: environment.to_owned(), // IMPORTANT: This creates snapshot
-                                                     // behaviour!!! May have to check
-                                                     // Rc<RefCell<Environment>> to avoid this behaviour
-            })
-        }
+        Expression::FunctionLiteral(node) => Object::Function(Function {
+            parameters: node.parameters.clone(),
+            body: node.body.clone(),
+            environment: environment.to_owned(),
+        }),
         Expression::Call(node) => {
             let function = eval(&node.function, environment);
             if is_error(&function) {
@@ -132,8 +135,8 @@ pub fn eval(expression: &Expression, environment: &mut Environment) -> Object {
 
 fn apply_function(function: &Object, args: &[Object]) -> Object {
     if let Object::Function(func) = function {
-        let mut extended_environment = extend_function_env(func, args);
-        let evaluated = eval_block_statement(&func.body, &mut extended_environment);
+        let extended_environment = extend_function_env(func, args);
+        let evaluated = eval_block_statement(&func.body, &extended_environment);
         unwrap_return_value(evaluated)
     } else {
         new_error(format!("not a function: {}", function.object_type()))
@@ -147,15 +150,18 @@ fn unwrap_return_value(evaluated: Object) -> Object {
     evaluated
 }
 
-fn extend_function_env(function: &Function, args: &[Object]) -> Environment {
+fn extend_function_env(function: &Function, args: &[Object]) -> Rc<RefCell<Environment>> {
     let mut environment = Environment::new_enclosed(function.environment.clone());
     for (idx, param) in function.parameters.iter().enumerate() {
         environment.set(param.value.clone(), args[idx].clone());
     }
-    environment
+    Rc::new(RefCell::new(environment))
 }
 
-fn eval_expression(arguments: &[Expression], environment: &mut Environment) -> Vec<Object> {
+fn eval_expression(
+    arguments: &[Expression],
+    environment: &Rc<RefCell<Environment>>,
+) -> Vec<Object> {
     let mut result: Vec<Object> = Vec::new();
     for exp in arguments {
         let evaluated = eval(exp, environment);
@@ -167,8 +173,8 @@ fn eval_expression(arguments: &[Expression], environment: &mut Environment) -> V
     result
 }
 
-fn eval_identifier(identifier: &Identifier, environment: &mut Environment) -> Object {
-    match environment.get(&identifier.value) {
+fn eval_identifier(identifier: &Identifier, environment: &Rc<RefCell<Environment>>) -> Object {
+    match environment.borrow().get(&identifier.value) {
         Some(val) => val.clone(),
         None => new_error(format!("identifier not found: {}", identifier.value)),
     }
@@ -178,7 +184,7 @@ fn eval_if_expression(
     cond_expr: &Expression,
     conseq: &BlockStatement,
     alternative: Option<&BlockStatement>,
-    environment: &mut Environment,
+    environment: &Rc<RefCell<Environment>>,
 ) -> Object {
     let condition = eval(cond_expr, environment);
     if is_error(&condition) {
