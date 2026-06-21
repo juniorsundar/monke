@@ -182,6 +182,13 @@ pub fn eval(expression: &Expression, runtime: &mut Runtime, env_id: EnvId) -> Ob
 
 fn apply_function(function: &Object, args: &[Object], runtime: &mut Runtime) -> Object {
     if let Object::Function(func) = function {
+        if func.parameters.len() != args.len() {
+            return new_error(format!(
+                "wrong number of arguments: got={}, want={}",
+                args.len(),
+                func.parameters.len()
+            ));
+        }
         let extended_environment = extend_function_env(func, args, runtime);
         let evaluated = eval_block_statement(&func.body, runtime, extended_environment);
         unwrap_return_value(evaluated)
