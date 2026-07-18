@@ -2,7 +2,7 @@ use crate::{
     ast::{
         BlockStatement, BooleanLiteral, Call, Expression, ExpressionStatement, FunctionLiteral,
         Identifier, If, Infix, IntegerLiteral, LetStatement, Prefix, Program, ReturnStatement,
-        Statement,
+        Statement, StringLiteral,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -213,6 +213,7 @@ impl Parser {
             TokenType::Lparen => self.parse_grouped_expression()?,
             TokenType::If => self.parse_if_expression()?,
             TokenType::Function => self.parse_function_literal_expression()?,
+            TokenType::String => self.parse_string_literal_expression()?,
             _ => return None,
         };
 
@@ -481,5 +482,12 @@ impl Parser {
         }
 
         Some(args)
+    }
+
+    fn parse_string_literal_expression(&self) -> Option<Expression> {
+        Some(Expression::StringLiteral(StringLiteral {
+            token: self.current_token.clone(),
+            value: self.current_token.t_literal.clone(),
+        }))
     }
 }

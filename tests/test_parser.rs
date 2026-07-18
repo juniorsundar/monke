@@ -912,3 +912,38 @@ fn test_call_expression_parsing() {
         Expected::Integer(5),
     );
 }
+
+#[test]
+fn test_string_literal_expression() {
+    let input = "\"hello_world\";";
+
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+
+    let program = parser.parse_program();
+    check_parser_errors(&parser);
+
+    assert_eq!(
+        program.statements.len(),
+        1,
+        "program.Statements does not contain enough statements. got={}",
+        program.statements.len()
+    );
+
+    let Statement::Expression(e) = &program.statements[0] else {
+        panic!(
+            "Expected Statement::Expression(..) got={:?}",
+            program.statements[0]
+        )
+    };
+
+    let Some(Expression::StringLiteral(string_literal)) = e.value.as_deref() else {
+        panic!(
+            "Expression is missing or not a StringLiteral. got={:?}",
+            e.value
+        );
+    };
+
+    assert_eq!(string_literal.value, "hello_world".to_string());
+    assert_eq!(string_literal.token.t_literal, "hello_world".to_string());
+}

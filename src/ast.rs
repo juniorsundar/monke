@@ -218,6 +218,16 @@ impl Call {
         out
     }
 }
+#[derive(Debug, Clone, PartialEq)]
+pub struct StringLiteral {
+    pub token: Token,
+    pub value: String,
+}
+impl StringLiteral {
+    pub fn string(&self) -> String {
+        self.token.t_literal.clone()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
@@ -229,6 +239,7 @@ pub enum Expression {
     If(If),
     FunctionLiteral(FunctionLiteral),
     Call(Call),
+    StringLiteral(StringLiteral),
 }
 impl Expression {
     pub fn string(&self) -> String {
@@ -241,6 +252,7 @@ impl Expression {
             Expression::If(t) => t.string(),
             Expression::FunctionLiteral(t) => t.string(),
             Expression::Call(t) => t.string(),
+            Expression::StringLiteral(t) => t.string(),
         }
     }
 }

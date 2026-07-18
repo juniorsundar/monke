@@ -111,6 +111,10 @@ impl Lexer {
             b'>' => Token::new(TokenType::Gt, self.ch),
             b'{' => Token::new(TokenType::Lbrace, self.ch),
             b'}' => Token::new(TokenType::Rbrace, self.ch),
+            b'"' => Token {
+                t_type: TokenType::String,
+                t_literal: self.read_string(),
+            },
             0 => Token {
                 t_type: TokenType::Eof,
                 t_literal: "".to_string(),
@@ -152,5 +156,19 @@ impl Lexer {
         while self.ch == b' ' || self.ch == b'\t' || self.ch == b'\n' || self.ch == b'\r' {
             self.read_char();
         }
+    }
+
+    fn read_string(&mut self) -> String {
+        let position = self.position + 1;
+        loop {
+            self.read_char();
+            if self.ch == b'"' || self.ch == 0 {
+                break;
+            }
+        }
+
+        std::str::from_utf8(&self.input[position..self.position])
+            .unwrap()
+            .to_string()
     }
 }

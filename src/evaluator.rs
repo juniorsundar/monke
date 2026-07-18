@@ -177,6 +177,7 @@ pub fn eval(expression: &Expression, runtime: &mut Runtime, env_id: EnvId) -> Ob
 
             apply_function(&function, &args, runtime)
         }
+        Expression::StringLiteral(node) => Object::String(node.value.to_string()),
     }
 }
 

@@ -13,6 +13,7 @@ pub enum ObjectType {
     Return,
     Error,
     Function,
+    String,
 }
 
 impl fmt::Display for ObjectType {
@@ -24,6 +25,7 @@ impl fmt::Display for ObjectType {
             ObjectType::Return => write!(f, "Return"),
             ObjectType::Error => write!(f, "Error"),
             ObjectType::Function => write!(f, "Function"),
+            ObjectType::String => write!(f, "String"),
         }
     }
 }
@@ -48,6 +50,7 @@ pub enum Object {
     Return(Box<Object>),
     Error(String),
     Function(Function),
+    String(String),
 }
 
 impl Object {
@@ -59,6 +62,7 @@ impl Object {
             Object::Return(_) => ObjectType::Return,
             Object::Error(_) => ObjectType::Error,
             Object::Function(_) => ObjectType::Function,
+            Object::String(_) => ObjectType::String,
         }
     }
 
@@ -85,6 +89,7 @@ impl Object {
 
                 out
             }
+            Object::String(val) => val.to_string(),
         }
     }
 }

@@ -298,3 +298,30 @@ fn test_eval(input: String) -> Object {
 
     eval_program(&program, &mut runtime, env_id)
 }
+
+#[test]
+fn test_eval_string_expressions() {
+    let tests = [("\"hello world\"", "hello world")];
+
+    for test_item in tests {
+        let evaluated = test_eval(test_item.0.to_string());
+        assert_eq!(
+            evaluated.object_type(),
+            ObjectType::String,
+            "Evaluated object is not ObjectType::String, got={:?}",
+            evaluated.object_type()
+        );
+
+        let Object::String(eval_str) = evaluated else {
+            panic!("Evaluated object was not String");
+        };
+
+        assert_eq!(
+            eval_str,
+            test_item.1.to_string(),
+            "Evaluated is {}, Provided was {}",
+            eval_str,
+            test_item.1.to_string()
+        );
+    }
+}
