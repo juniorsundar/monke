@@ -276,6 +276,15 @@ fn eval_infix_expression(operator: &str, left: Object, right: Object) -> Object 
                 ObjectType::Boolean
             )),
         },
+        (Object::String(left_str), Object::String(right_str)) => match operator {
+            "+" => eval_string_infix_expression(left_str, right_str),
+            _ => new_error(format!(
+                "unknown operator: {} {} {}",
+                ObjectType::String,
+                operator,
+                ObjectType::String,
+            )),
+        },
         _ => {
             if left.object_type() != right.object_type() {
                 return new_error(format!(
@@ -293,6 +302,10 @@ fn eval_infix_expression(operator: &str, left: Object, right: Object) -> Object 
             ))
         }
     }
+}
+
+fn eval_string_infix_expression(left_str: &str, right_str: &str) -> Object {
+    Object::String(left_str.to_owned() + right_str)
 }
 
 fn eval_integer_infix_expression(operator: &str, left_int: i64, right_int: i64) -> Object {

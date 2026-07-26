@@ -146,6 +146,7 @@ fn test_error_handling() {
             "unknown operator: Boolean + Boolean",
         ),
         ("foobar", "identifier not found: foobar"),
+        ("\"Hello\" - \"World\"", "unknown operator: String - String"),
     ];
 
     for test_item in tests {
@@ -324,4 +325,27 @@ fn test_eval_string_expressions() {
             test_item.1.to_string()
         );
     }
+}
+
+#[test]
+fn test_string_concatenation() {
+    let input = "\"Hello\" + \" \" + \"World!\"";
+
+    let evaluated = test_eval(input.to_string());
+    assert_eq!(
+        evaluated.object_type(),
+        ObjectType::String,
+        "Evaluated object is not ObjectType::String, got={:?}",
+        evaluated.object_type()
+    );
+
+    let Object::String(eval_str) = evaluated else {
+        panic!("Evaluated object was not String");
+    };
+
+    assert_eq!(
+        eval_str, "Hello World!",
+        "Evaluated is {}, Provided was {}",
+        eval_str, "Hello World!"
+    );
 }
